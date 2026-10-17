@@ -35,5 +35,5 @@ export class MongoWatchStatusRepository implements WatchStatusRepository {
 }
 
 function toStatus({ _id, atHome, flatrate, frenchAudio, checkedAt }: WatchStatusDocument): WatchStatus {
-  return { titleId: _id, atHome, flatrate: flatrate ?? [], frenchAudio, checkedAt };
+  return { titleId: _id, atHome, flatrate, frenchAudio, checkedAt };
 }

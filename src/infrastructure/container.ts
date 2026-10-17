@@ -42,4 +42,6 @@ export const dailyCheck = new DailyCheck(
   watchStatusRepository,
   alertRepository,
 );
-export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);
+export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository, (title) =>
+  dailyCheck.checkTitle(title),
+);
