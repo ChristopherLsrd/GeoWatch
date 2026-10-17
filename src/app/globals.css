@@ -735,6 +735,41 @@ button.ghost.ghost-danger:hover:not(:disabled) { color: var(--danger); }
   white-space: nowrap;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
+/* Pastilles de notes IMDb / TMDB en bas à gauche de l'affiche. */
+.poster-scores {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  right: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+}
+.poster-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(13, 16, 21, 0.82);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  line-height: 1;
+}
+/* Variantes dans le texte (« Ma liste ») : badge « Chez moi » et notes sous le réalisateur. */
+.watch-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.watch-badges:empty { display: none; }
+.poster-badge.inline { position: static; height: 24px; max-width: none; padding: 0 9px 0 7px; font-size: 12px; box-shadow: none; }
+.poster-badge.inline svg { width: 14px; height: 14px; }
+.poster-scores.inline { position: static; display: flex; pointer-events: auto; }
+.poster-scores.inline .poster-score { height: 24px; padding: 0 9px; gap: 6px; background: var(--surface-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.poster-scores.inline .poster-score span { font-size: 11px; }
+.poster-scores.inline .poster-score strong { font-size: 13px; }
+.poster-score span { font-family: var(--font-mono), ui-monospace, monospace; font-size: 10px; color: var(--accent); }
+.poster-score strong { font-size: 11.5px; font-weight: 700; color: var(--text); }
 .card:hover .card-poster, .card:focus-visible .card-poster { border-color: var(--accent); }
 .card:hover .card-title { color: var(--accent); }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -743,6 +778,9 @@ button.ghost.ghost-danger:hover:not(:disabled) { color: var(--danger); }
   .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 10px; }
   .card-title { font-size: 13.5px; margin-top: 6px; }
   .card-meta { font-size: 12px; }
+  .poster-score { height: 18px; padding: 0 5px; gap: 3px; }
+  .poster-score span { font-size: 9px; }
+  .poster-score strong { font-size: 10.5px; }
 }
 
 /* Connexion */
