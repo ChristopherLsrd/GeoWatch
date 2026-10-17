@@ -1,4 +1,4 @@
-// GET /api/titles/tm92641 → { title: Title }
+// GET /api/titles/tm92641 → { title: TitleDetails } (synopsis, notes, réalisateurs, acteurs principaux)
 
 import { NextResponse } from "next/server";
 import { getTitle } from "@/infrastructure/container";

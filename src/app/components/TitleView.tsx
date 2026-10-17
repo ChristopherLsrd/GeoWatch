@@ -6,7 +6,7 @@ import { countryBatches } from "@/application/catalog/countryBatches";
 import { countryFlag, countryName } from "@/domain/Country";
 import type { Offer } from "@/domain/Offer";
 import type { Subscription } from "@/domain/Subscription";
-import type { Title } from "@/domain/Title";
+import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
 import { OfferResults } from "./OfferResults";
 import { WatchlistButton } from "./WatchlistButton";
@@ -16,7 +16,7 @@ const TOTAL_COUNTRIES = BATCHES.reduce((sum, batch) => sum + batch.length, 0);
 
 type TitleState =
   | { kind: "loading" }
-  | { kind: "ready"; title: Title }
+  | { kind: "ready"; title: TitleDetails }
   | { kind: "not_found" }
   | { kind: "error" };
 
@@ -35,14 +35,32 @@ function formatCheckedAt(iso: string): string {
   return `le ${shortDay} à ${time}`;
 }
 
-function externalLinks(title: Title) {
-  const links: { label: string; href: string }[] = [];
-  if (title.imdbId) links.push({ label: "IMDb", href: `https://www.imdb.com/title/${title.imdbId}` });
-  if (title.tmdbId) {
-    const kind = title.type === "MOVIE" ? "movie" : "tv";
-    links.push({ label: "TMDB", href: `https://www.themoviedb.org/${kind}/${title.tmdbId}` });
-  }
-  return links;
+const nf = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// 148 -> « 2 h 28 » ; 120 -> « 2 h » ; 45 -> « 45 min ».
+function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+}
+
+// 2900000 -> « 2,9 M votes » ; 12400 -> « 12 k votes ».
+function formatVotes(votes: number): string {
+  const compact = (n: number) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: n < 10 ? 1 : 0 }).format(n);
+  if (votes >= 1_000_000) return `${compact(votes / 1_000_000)} M votes`;
+  if (votes >= 1_000) return `${compact(votes / 1_000)} k votes`;
+  return `${votes} ${votes > 1 ? "votes" : "vote"}`;
+}
+
+function ratingPills(title: TitleDetails) {
+  const kind = title.type === "MOVIE" ? "movie" : "tv";
+  const imdbHref = title.imdbId ? `https://www.imdb.com/title/${title.imdbId}/` : null;
+  const tmdbHref = title.tmdbId ? `https://www.themoviedb.org/${kind}/${title.tmdbId}` : null;
+  return [
+    { label: "IMDb", score: title.imdbScore, votes: title.imdbVotes, href: imdbHref },
+    { label: "TMDB", score: title.tmdbScore, votes: null, href: tmdbHref },
+  ];
 }
 
 export function TitleView({ id }: { id: string }) {
@@ -109,7 +127,7 @@ export function TitleView({ id }: { id: string }) {
         const response = await apiFetch(`/api/titles/${encodeURIComponent(id)}`, current.signal);
         if (response.status === 404) return setTitleState({ kind: "not_found" });
         if (!response.ok) throw new Error(String(response.status));
-        const body = (await response.json()) as { title: Title };
+        const body = (await response.json()) as { title: TitleDetails };
         if (!current.signal.aborted) setTitleState({ kind: "ready", title: body.title });
       } catch {
         if (!current.signal.aborted) setTitleState({ kind: "error" });
@@ -241,8 +259,24 @@ export function TitleView({ id }: { id: string }) {
   );
 }
 
-function TitleHeader({ title, atHome }: { title: Title; atHome: Subscription[] }) {
-  const links = externalLinks(title);
+const SYNOPSIS_LIMIT = 300;
+const CAST_VISIBLE = 5;
+
+function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscription[] }) {
+  const [synopsisOpen, setSynopsisOpen] = useState(false);
+  const [castOpen, setCastOpen] = useState(false);
+  const pills = ratingPills(title);
+  const meta = [
+    title.year ?? "année inconnue",
+    title.type === "MOVIE" ? "Film" : "Série",
+    ...(title.runtime ? [formatRuntime(title.runtime)] : []),
+    ...(title.genres.length > 0 ? [title.genres.join(", ")] : []),
+  ];
+  const synopsis = title.synopsis?.trim() ?? "";
+  const longSynopsis = synopsis.length > SYNOPSIS_LIMIT;
+  const synopsisText =
+    longSynopsis && !synopsisOpen ? `${synopsis.slice(0, SYNOPSIS_LIMIT).trimEnd()}…` : synopsis;
+  const cast = castOpen ? title.cast : title.cast.slice(0, CAST_VISIBLE);
   return (
     <header className="title-head">
       {title.posterUrl ? (
@@ -252,16 +286,63 @@ function TitleHeader({ title, atHome }: { title: Title; atHome: Subscription[] }
       )}
       <div>
         <h1>{title.name}</h1>
-        <div className="muted">
-          {title.year ?? "année inconnue"} · {title.type === "MOVIE" ? "Film" : "Série"}
-        </div>
-        {links.length > 0 && (
-          <div className="links">
-            {links.map((link) => (
-              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">
-                {link.label}
+        {title.originalTitle && title.originalTitle !== title.name && (
+          <div className="muted original-title">{title.originalTitle}</div>
+        )}
+        <div className="muted">{meta.join(" · ")}</div>
+        <div className="ratings">
+          {pills.map((pill) => {
+            const content = (
+              <>
+                <strong>{pill.label}</strong>
+                {pill.score != null && <span>{nf.format(pill.score)}</span>}
+                {pill.votes != null && <span className="muted">{formatVotes(pill.votes)}</span>}
+              </>
+            );
+            if (pill.score == null && !pill.href) return null;
+            return pill.href ? (
+              <a key={pill.label} className="rating" href={pill.href} target="_blank" rel="noopener noreferrer">
+                {content}
               </a>
-            ))}
+            ) : (
+              <span key={pill.label} className="rating">
+                {content}
+              </span>
+            );
+          })}
+        </div>
+        {title.directors.length > 0 && (
+          <div className="credit">
+            <span className="muted">{title.type === "MOVIE" ? "Réalisation" : "Création"} :</span>{" "}
+            {title.directors.join(", ")}
+          </div>
+        )}
+        {synopsis && (
+          <div className="synopsis">
+            <p>{synopsisText}</p>
+            {longSynopsis && (
+              <button type="button" className="link-button" onClick={() => setSynopsisOpen(!synopsisOpen)}>
+                {synopsisOpen ? "Réduire" : "Lire la suite"}
+              </button>
+            )}
+          </div>
+        )}
+        {title.cast.length > 0 && (
+          <div className="cast">
+            <span className="muted">Distribution :</span>
+            <ul>
+              {cast.map((member, index) => (
+                <li key={`${member.name}-${index}`}>
+                  {member.name}
+                  {member.character && <span className="muted"> · {member.character}</span>}
+                </li>
+              ))}
+            </ul>
+            {title.cast.length > CAST_VISIBLE && (
+              <button type="button" className="link-button" onClick={() => setCastOpen(!castOpen)}>
+                {castOpen ? "Réduire" : "Voir tout"}
+              </button>
+            )}
           </div>
         )}
         {atHome.length > 0 && (

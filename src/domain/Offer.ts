@@ -23,4 +23,6 @@ export type Offer = {
   audioLanguages: LanguageCode[];
   subtitleLanguages: LanguageCode[];
   url: string | null;
+  // Ouvre directement la lecture sur la plateforme. Absent des offres mises en cache avant son ajout.
+  deepLinkUrl?: string | null;
 };

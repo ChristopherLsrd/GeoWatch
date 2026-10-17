@@ -1,10 +1,13 @@
 import type { CountryCode } from "../Country";
 import type { Offer, Platform } from "../Offer";
 import type { Title } from "../Title";
+import type { TitleDetails } from "../TitleDetails";
 
 export interface CatalogProvider {
   searchTitles(query: string): Promise<Title[]>;
   getTitle(titleId: string): Promise<Title | null>;
+  // Fiche complète (synopsis, notes, équipe) pour la page du titre.
+  getTitleDetails(titleId: string): Promise<TitleDetails | null>;
   // Offres du titre pour chaque pays demandé (liste vide si aucune).
   getOffers(titleId: string, countries: CountryCode[]): Promise<Record<CountryCode, Offer[]>>;
   // Plateformes proposant un abonnement dans le pays, pour choisir ses abonnements.

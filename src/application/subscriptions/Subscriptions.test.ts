@@ -24,6 +24,7 @@ function setup() {
   const repository = new InMemorySubscriptions();
   const catalog: CatalogProvider = {
     searchTitles: async () => [],
+    getTitleDetails: async () => null,
     getTitle: async () => null,
     getOffers: async () => ({}),
     listSubscriptionPlatforms: async (country) => (country === "FR" ? [netflix] : []),

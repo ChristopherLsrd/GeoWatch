@@ -43,6 +43,9 @@ class FakeCatalog implements CatalogProvider {
   async searchTitles() {
     return [];
   }
+  async getTitleDetails() {
+    return null;
+  }
   async getTitle() {
     return null;
   }
