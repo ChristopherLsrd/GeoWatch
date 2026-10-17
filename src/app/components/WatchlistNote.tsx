@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { MAX_NOTE_LENGTH } from "@/domain/WatchlistItem";
 import { saveNote } from "./watchlistApi";
 
@@ -33,7 +34,10 @@ export function WatchlistNote({
   return (
     <div className="note">
       <label className="note-label">
-        Note perso
+        <span className="note-title">
+          <PencilIcon aria-hidden="true" />
+          Note perso
+        </span>
         <textarea
           value={draft}
           maxLength={MAX_NOTE_LENGTH}
