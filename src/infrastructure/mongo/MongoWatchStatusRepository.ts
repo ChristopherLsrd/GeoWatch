@@ -9,13 +9,22 @@ export class MongoWatchStatusRepository implements WatchStatusRepository {
 
   async get(titleId: string): Promise<WatchStatus | null> {
     const doc = await (await this.collection()).findOne({ _id: titleId });
-    return doc ? { titleId: doc._id, atHome: doc.atHome, frenchAudio: doc.frenchAudio, checkedAt: doc.checkedAt } : null;
+    return doc ? toStatus(doc) : null;
+  }
+
+  async getMany(titleIds: string[]): Promise<WatchStatus[]> {
+    return (await (await this.collection()).find({ _id: { $in: titleIds } }).toArray()).map(toStatus);
   }
 
   async save(status: WatchStatus): Promise<void> {
     await (await this.collection()).replaceOne(
       { _id: status.titleId },
-      { atHome: status.atHome, frenchAudio: status.frenchAudio, checkedAt: status.checkedAt },
+      {
+        atHome: status.atHome,
+        flatrate: status.flatrate ?? [],
+        frenchAudio: status.frenchAudio,
+        checkedAt: status.checkedAt,
+      },
       { upsert: true },
     );
   }
@@ -23,4 +32,8 @@ export class MongoWatchStatusRepository implements WatchStatusRepository {
   private async collection(): Promise<Collection<WatchStatusDocument>> {
     return (await this.db()).collection<WatchStatusDocument>("watchStatus");
   }
+}
+
+function toStatus({ _id, atHome, flatrate, frenchAudio, checkedAt }: WatchStatusDocument): WatchStatus {
+  return { titleId: _id, atHome, flatrate: flatrate ?? [], frenchAudio, checkedAt };
 }

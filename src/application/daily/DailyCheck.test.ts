@@ -56,6 +56,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   const statuses = new Map<string, WatchStatus>();
   const statusRepo: WatchStatusRepository = {
     get: async (id) => statuses.get(id) ?? null,
+    getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
     save: async (status) => void statuses.set(status.titleId, status),
   };
   const stored: Alert[] = [];
@@ -83,7 +84,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   };
 }
 
-const item = (id: string): WatchlistItem => ({ title: title(id), note: "", addedAt: new Date() });
+const item = (id: string): WatchlistItem => ({ title: title(id), details: null, note: "", addedAt: new Date() });
 
 describe("DailyCheck", () => {
   it("sert de référence au premier passage, puis signale l'arrivée chez moi et la VF", async () => {

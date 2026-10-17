@@ -1,4 +1,4 @@
-import type { WatchlistItem } from "../WatchlistItem";
+import type { WatchlistDetails, WatchlistItem } from "../WatchlistItem";
 
 export interface WatchlistRepository {
   // Du plus récent au plus ancien.
@@ -9,4 +9,5 @@ export interface WatchlistRepository {
   // Renvoie false si le titre n'est pas dans la liste.
   updateNote(titleId: string, note: string): Promise<boolean>;
   remove(titleId: string): Promise<void>;
+  updateDetails(titleId: string, details: WatchlistDetails): Promise<void>;
 }

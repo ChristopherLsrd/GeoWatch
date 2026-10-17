@@ -9,6 +9,7 @@ import { SearchHistory } from "@/application/history/SearchHistory";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
 import { Watchlist } from "@/application/watchlist/Watchlist";
+import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
 import { getDb } from "./mongo/client";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
@@ -33,10 +34,12 @@ export const subscriptions = new Subscriptions(subscriptionRepository, catalog);
 export const searchHistory = new SearchHistory(new MongoSearchHistoryRepository(getDb));
 export const userPreferences = new UserPreferences(new MongoPreferencesRepository(getDb));
 export const alerts = new Alerts(alertRepository);
+const watchStatusRepository = new MongoWatchStatusRepository(getDb);
 export const dailyCheck = new DailyCheck(
   watchlistRepository,
   subscriptionRepository,
   getTitleAvailability,
-  new MongoWatchStatusRepository(getDb),
+  watchStatusRepository,
   alertRepository,
 );
+export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);

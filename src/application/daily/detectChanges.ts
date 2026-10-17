@@ -10,6 +10,9 @@ export function currentStatus(titleId: string, offers: Offer[], subscriptions: S
   return {
     titleId,
     atHome: availableAtHome(offers, subscriptions).map((s) => `${s.country}:${s.platform.id}`),
+    flatrate: [
+      ...new Set(offers.filter((o) => o.monetizationType === "FLATRATE").map((o) => `${o.country}:${o.platform.id}`)),
+    ],
     frenchAudio: offers.some((offer) => offer.audioLanguages.includes("fr")),
     checkedAt: now,
   };

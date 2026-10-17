@@ -3,6 +3,8 @@
 
 import { BATCH_SIZE, PRIORITY_1 } from "@/config/countries";
 import type { CountryCode } from "@/domain/Country";
+import type { Subscription } from "@/domain/Subscription";
+import type { Title } from "@/domain/Title";
 import type { Offer } from "@/domain/Offer";
 import type { AlertRepository } from "@/domain/ports/AlertRepository";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
@@ -41,7 +43,6 @@ export class DailyCheck {
   async execute({ pauseMs = 1000, timeBudgetMs = 240_000 }: DailyCheckOptions = {}): Promise<DailyCheckReport> {
     const started = this.clock().getTime();
     const [items, subscriptions] = await Promise.all([this.watchlist.list(), this.subscriptions.list()]);
-    const countries = [...new Set<CountryCode>([...PRIORITY_1, ...subscriptions.map((s) => s.country)])];
     const report: DailyCheckReport = { checked: 0, total: items.length, alerts: 0, stoppedEarly: null };
 
     for (const [index, { title }] of items.entries()) {
@@ -50,9 +51,8 @@ export class DailyCheck {
         break;
       }
       if (index > 0 && pauseMs > 0) await this.sleep(pauseMs);
-      let offers: Offer[];
       try {
-        offers = await this.offers(title.id, countries);
+        report.alerts += await this.check(title, subscriptions);
       } catch (error) {
         if (error instanceof CatalogUnavailableError) {
           report.stoppedEarly = "catalog_unavailable";
@@ -60,14 +60,25 @@ export class DailyCheck {
         }
         throw error;
       }
-      const current = currentStatus(title.id, offers, subscriptions, this.clock());
-      const alerts = detectChanges(title, await this.statuses.get(title.id), current, subscriptions);
-      if (alerts.length > 0) await this.alerts.add(alerts);
-      await this.statuses.save(current);
       report.checked++;
-      report.alerts += alerts.length;
     }
     return report;
+  }
+
+  // Vérifie un seul titre (par exemple à son ajout dans la liste), sans attendre le cron.
+  async checkTitle(title: Title): Promise<void> {
+    await this.check(title, await this.subscriptions.list());
+  }
+
+  // Renvoie le nombre de nouveautés signalées.
+  private async check(title: Title, subscriptions: Subscription[]): Promise<number> {
+    const countries = [...new Set<CountryCode>([...PRIORITY_1, ...subscriptions.map((s) => s.country)])];
+    const offers = await this.offers(title.id, countries);
+    const current = currentStatus(title.id, offers, subscriptions, this.clock());
+    const alerts = detectChanges(title, await this.statuses.get(title.id), current, subscriptions);
+    if (alerts.length > 0) await this.alerts.add(alerts);
+    await this.statuses.save(current);
+    return alerts.length;
   }
 
   // Passe par le cache du jour : un titre déjà consulté aujourd'hui ne coûte aucune requête.
