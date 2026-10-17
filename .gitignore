@@ -1,0 +1,17 @@
+# Variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Claude
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+
+# Dépendances et build
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.vercel/
