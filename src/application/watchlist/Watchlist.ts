@@ -1,12 +1,15 @@
 // Gestion de la liste à voir.
 
-import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
+import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { WatchlistRepository } from "@/domain/ports/WatchlistRepository";
-import { MAX_NOTE_LENGTH, type WatchlistItem } from "@/domain/WatchlistItem";
+import { MAX_NOTE_LENGTH, toWatchlistEntry, type WatchlistItem } from "@/domain/WatchlistItem";
 
 export class TitleNotFoundError extends Error {}
 export class NotInWatchlistError extends Error {}
 export class InvalidNoteError extends Error {}
+
+// Nombre maximal de titres complétés par lecture, pour rester raisonnable avec le catalogue.
+const BACKFILL_LIMIT = 20;
 
 export class Watchlist {
   constructor(
@@ -15,21 +18,34 @@ export class Watchlist {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  list(): Promise<WatchlistItem[]> {
-    return this.repository.list();
+  // Complète au passage le résumé des titres ajoutés avant son introduction.
+  async list(): Promise<WatchlistItem[]> {
+    const items = await this.repository.list();
+    for (const item of items.filter((i) => !i.details).slice(0, BACKFILL_LIMIT)) {
+      try {
+        const details = await this.catalog.getTitleDetails(item.title.id);
+        if (!details) continue;
+        item.details = toWatchlistEntry(details, this.clock()).details;
+        await this.repository.updateDetails(item.title.id, item.details);
+      } catch (error) {
+        if (error instanceof CatalogUnavailableError) break;
+        throw error;
+      }
+    }
+    return items;
   }
 
   get(titleId: string): Promise<WatchlistItem | null> {
     return this.repository.get(titleId);
   }
 
-  // Le titre est relu dans le catalogue pour enregistrer des identifiants fiables.
+  // Le titre est relu dans le catalogue pour enregistrer des identifiants fiables et le résumé de sa fiche.
   async add(titleId: string): Promise<WatchlistItem> {
     const existing = await this.repository.get(titleId);
     if (existing) return existing;
-    const title = await this.catalog.getTitle(titleId);
-    if (!title) throw new TitleNotFoundError(titleId);
-    const item: WatchlistItem = { title, note: "", addedAt: this.clock() };
+    const details = await this.catalog.getTitleDetails(titleId);
+    if (!details) throw new TitleNotFoundError(titleId);
+    const item: WatchlistItem = { ...toWatchlistEntry(details, this.clock()), note: "", addedAt: this.clock() };
     await this.repository.add(item);
     return item;
   }

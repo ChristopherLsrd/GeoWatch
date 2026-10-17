@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { WatchlistItem } from "@/domain/WatchlistItem";
 import { apiFetch } from "./apiFetch";
+import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 import { removeFromWatchlist } from "./watchlistApi";
 import { WatchlistNote } from "./WatchlistNote";
 
 // L'API renvoie la date d'ajout en chaîne ISO.
-type Item = Omit<WatchlistItem, "addedAt"> & { addedAt: string };
+type Item = OverviewItem;
 
 type State = { kind: "loading" } | { kind: "ready"; items: Item[] } | { kind: "error" };
 
@@ -92,11 +92,14 @@ export function WatchlistView() {
       <ul className="results">
         {state.items.map((item) => (
           <li key={item.title.id} className="watch-item">
-            {item.title.posterUrl ? (
-              <img className="poster" src={item.title.posterUrl} alt={`Affiche de ${item.title.name}`} />
-            ) : (
-              <div className="poster" />
-            )}
+            <div className="poster-wrap">
+              {item.title.posterUrl ? (
+                <img className="poster" src={item.title.posterUrl} alt={`Affiche de ${item.title.name}`} />
+              ) : (
+                <div className="poster" />
+              )}
+              <HomeBadge item={item} />
+            </div>
             <div className="watch-body">
               <div className="watch-head">
                 <div>
@@ -107,6 +110,9 @@ export function WatchlistView() {
                     {item.title.year ?? "année inconnue"} · {item.title.type === "MOVIE" ? "Film" : "Série"} · ajouté le{" "}
                     {formatDate(item.addedAt)}
                   </div>
+                  {directorsLabel(item.details) && (
+                    <div className="muted">De {directorsLabel(item.details)}</div>
+                  )}
                 </div>
                 <button type="button" onClick={() => void remove(item)}>
                   Retirer

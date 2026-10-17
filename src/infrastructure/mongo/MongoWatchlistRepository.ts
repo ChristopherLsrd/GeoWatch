@@ -1,12 +1,14 @@
 import type { Collection, Db } from "mongodb";
 import type { WatchlistRepository } from "@/domain/ports/WatchlistRepository";
 import type { Title } from "@/domain/Title";
-import type { WatchlistItem } from "@/domain/WatchlistItem";
+import type { WatchlistDetails, WatchlistItem } from "@/domain/WatchlistItem";
 
 type WatchlistDocument = {
   // Identifiant JustWatch du titre.
   _id: string;
   title: Title;
+  // Absent des documents enregistrés avant l'ajout du résumé.
+  details?: WatchlistDetails | null;
   note: string;
   addedAt: Date;
 };
@@ -29,7 +31,7 @@ export class MongoWatchlistRepository implements WatchlistRepository {
   async add(item: WatchlistItem): Promise<void> {
     await (await this.collection()).updateOne(
       { _id: item.title.id },
-      { $setOnInsert: { title: item.title, note: item.note, addedAt: item.addedAt } },
+      { $setOnInsert: { title: item.title, details: item.details, note: item.note, addedAt: item.addedAt } },
       { upsert: true },
     );
   }
@@ -37,6 +39,10 @@ export class MongoWatchlistRepository implements WatchlistRepository {
   async updateNote(titleId: string, note: string): Promise<boolean> {
     const result = await (await this.collection()).updateOne({ _id: titleId }, { $set: { note } });
     return result.matchedCount > 0;
+  }
+
+  async updateDetails(titleId: string, details: WatchlistDetails): Promise<void> {
+    await (await this.collection()).updateOne({ _id: titleId }, { $set: { details } });
   }
 
   async remove(titleId: string): Promise<void> {
@@ -54,6 +60,6 @@ export class MongoWatchlistRepository implements WatchlistRepository {
   }
 }
 
-function toItem({ title, note, addedAt }: WatchlistDocument): WatchlistItem {
-  return { title, note, addedAt };
+function toItem({ title, details, note, addedAt }: WatchlistDocument): WatchlistItem {
+  return { title, details: details ?? null, note, addedAt };
 }

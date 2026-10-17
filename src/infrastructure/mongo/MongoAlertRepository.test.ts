@@ -46,7 +46,7 @@ describe("MongoWatchStatusRepository", () => {
   it("enregistre et relit l'état d'un titre", async () => {
     const repo = new MongoWatchStatusRepository(async () => client.db("s1"));
     expect(await repo.get("tm1")).toBeNull();
-    const status = { titleId: "tm1", atHome: ["FR:8"], frenchAudio: true, checkedAt: new Date("2026-10-17T05:00:00Z") };
+    const status = { titleId: "tm1", atHome: ["FR:8"], flatrate: ["FR:8", "BE:8"], frenchAudio: true, checkedAt: new Date("2026-10-17T05:00:00Z") };
     await repo.save(status);
     await repo.save({ ...status, frenchAudio: false });
     expect(await repo.get("tm1")).toEqual({ ...status, frenchAudio: false });

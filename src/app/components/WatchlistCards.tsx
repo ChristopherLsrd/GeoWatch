@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "./apiFetch";
+import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 
-// Seuls les champs affichés sont typés ici.
-type CardItem = { title: { id: string; name: string; posterUrl: string | null } };
+type CardItem = OverviewItem;
 
 type State = { kind: "loading" } | { kind: "ready"; items: CardItem[] } | { kind: "error" };
 
-// Liste à voir de l'accueil : affiche et titre uniquement, chaque carte mène à la page du titre.
+// Liste à voir de l'accueil : affiche, titre, année et réalisateur ; chaque carte mène à la page du titre.
 export function WatchlistCards() {
   const [state, setState] = useState<State>({ kind: "loading" });
 
@@ -44,18 +44,31 @@ export function WatchlistCards() {
         <p className="muted">Votre liste à voir est vide.</p>
       ) : (
         <ul className="card-grid">
-          {state.items.map(({ title }) => (
-            <li key={title.id}>
-              <Link href={`/titre/${encodeURIComponent(title.id)}`} className="card">
-                {title.posterUrl ? (
-                  <img className="card-poster" src={title.posterUrl} alt="" loading="lazy" />
-                ) : (
-                  <div className="card-poster" />
-                )}
-                <span className="card-title">{title.name}</span>
-              </Link>
-            </li>
-          ))}
+          {state.items.map((item) => {
+            const { title } = item;
+            const director = directorsLabel(item.details);
+            return (
+              <li key={title.id}>
+                <Link href={`/titre/${encodeURIComponent(title.id)}`} className="card">
+                  <span className="card-media">
+                    {title.posterUrl ? (
+                      <img className="card-poster" src={title.posterUrl} alt="" loading="lazy" />
+                    ) : (
+                      <span className="card-poster" />
+                    )}
+                    <HomeBadge item={item} />
+                  </span>
+                  <span className="card-title">{title.name}</span>
+                  {title.year !== null && <span className="card-meta">{title.year}</span>}
+                  {director && (
+                    <span className="card-meta" title={director}>
+                      {director}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

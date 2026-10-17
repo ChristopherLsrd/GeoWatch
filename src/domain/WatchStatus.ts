@@ -6,6 +6,9 @@ export type WatchStatus = {
   titleId: string;
   // Abonnements où le titre est disponible, sous la forme « FR:8 » (pays:plateforme).
   atHome: string[];
+  // Toutes les offres en abonnement trouvées dans les pays vérifiés (« FR:8 »), pour recalculer
+  // le badge « disponible chez moi » quand les abonnements changent. Absent des anciens états.
+  flatrate?: string[];
   // Au moins une offre en audio français dans les pays vérifiés.
   frenchAudio: boolean;
   checkedAt: Date;
