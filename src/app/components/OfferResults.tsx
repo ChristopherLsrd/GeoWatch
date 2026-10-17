@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CheckIcon } from "@heroicons/react/16/solid";
 import {
   filterOffers,
   groupOffers,
@@ -233,7 +234,7 @@ export function OfferResults({
               <div>
                 <div className="platform-name">
                   {group.name}
-                  {group.subscribed && <span className="badge badge-sub">Abonné</span>}
+                  {group.subscribed && <span className="badge badge-sub"><CheckIcon aria-hidden="true" />Abonné</span>}
                 </div>
                 <div className="muted">disponible dans {group.countryCount} pays</div>
                 {group.platforms.length > 1 && (

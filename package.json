@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ChristopherLsrd/GeoWatch#readme",
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "mongodb": "^7.7.0",
     "next": "^15.5.28",
     "react": "^19.3.1",
