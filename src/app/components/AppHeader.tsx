@@ -28,6 +28,13 @@ export function AppHeader() {
         >
           Abonnements
         </Link>
+        <Link
+          href="/preferences"
+          className={pathname === "/preferences" ? "nav-link active" : "nav-link"}
+          aria-current={pathname === "/preferences" ? "page" : undefined}
+        >
+          Préférences
+        </Link>
       </nav>
       <LogoutButton />
     </header>

@@ -52,6 +52,8 @@ export function TitleView({ id }: { id: string }) {
   const [nextBatch, setNextBatch] = useState(0);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  // undefined tant que non chargées ; null si aucune préférence ou échec.
+  const [prefs, setPrefs] = useState<{ audio: string | null; subtitles: string | null } | undefined>();
 
   const nextBatchRef = useRef(0);
   const refreshRef = useRef(false);
@@ -137,6 +139,29 @@ export function TitleView({ id }: { id: string }) {
     return () => current.abort();
   }, []);
 
+  // Préférences de langue chargées en parallèle ; en cas d'échec, pas de préférence.
+  useEffect(() => {
+    const current = new AbortController();
+    (async () => {
+      try {
+        const response = await apiFetch("/api/preferences", current.signal);
+        if (!response.ok) throw new Error(String(response.status));
+        const body = (await response.json()) as {
+          preferences: { audioLanguage: string | null; subtitleLanguage: string | null };
+        };
+        if (!current.signal.aborted) {
+          setPrefs({
+            audio: body.preferences.audioLanguage || null,
+            subtitles: body.preferences.subtitleLanguage || null,
+          });
+        }
+      } catch {
+        if (!current.signal.aborted) setPrefs({ audio: null, subtitles: null });
+      }
+    })();
+    return () => current.abort();
+  }, []);
+
   // Calculé sur toutes les offres reçues, pas sur les offres filtrées.
   const atHome = useMemo(() => availableAtHome(offers, subscriptions), [offers, subscriptions]);
   const subscribedPlatformIds = useMemo(
@@ -203,7 +228,13 @@ export function TitleView({ id }: { id: string }) {
             </div>
           </div>
 
-          <OfferResults offers={offers} complete={status === "done"} subscribedPlatformIds={subscribedPlatformIds} />
+          <OfferResults
+            offers={offers}
+            complete={status === "done"}
+            subscribedPlatformIds={subscribedPlatformIds}
+            defaultAudioLanguage={prefs?.audio}
+            defaultSubtitleLanguage={prefs?.subtitles}
+          />
         </>
       )}
     </div>
