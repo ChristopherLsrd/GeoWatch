@@ -11,16 +11,70 @@ type State =
   | { kind: "done"; titles: Title[] }
   | { kind: "error"; message: string };
 
+type HistoryEntry = { query: string; searchedAt: string };
+
 const DEBOUNCE_MS = 300;
+const HISTORY_VISIBLE = 10;
+const HISTORY_MAX = 50;
 
 export function SearchBox() {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const controller = useRef<AbortController | null>(null);
+  const lastSearched = useRef("");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showAll, setShowAll] = useState(false);
+
+  // Chargement de l'historique (erreurs ignorées : il est facultatif).
+  useEffect(() => {
+    const loader = new AbortController();
+    apiFetch("/api/history", loader.signal)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { entries?: HistoryEntry[] } | null) => {
+        if (body?.entries) setHistory(body.entries);
+      })
+      .catch(() => {});
+    return () => loader.abort();
+  }, []);
+
+  // Enregistre une recherche validée : sans attente ni erreur visible, et la liste locale suit.
+  function record(text: string, keepalive = false) {
+    const trimmed = text.trim();
+    if (trimmed.length < 2) return;
+    apiFetch("/api/history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: trimmed }),
+      keepalive,
+    }).catch(() => {});
+    setHistory((previous) =>
+      [
+        { query: trimmed, searchedAt: new Date().toISOString() },
+        ...previous.filter((entry) => entry.query.toLowerCase() !== trimmed.toLowerCase()),
+      ].slice(0, HISTORY_MAX),
+    );
+  }
+
+  async function clearHistory() {
+    if (!window.confirm("Effacer tout l'historique des recherches ?")) return;
+    try {
+      const response = await apiFetch("/api/history", { method: "DELETE" });
+      if (response.ok) setHistory([]);
+    } catch {
+      // Silencieux : l'historique reste affiché.
+    }
+  }
+
+  function pickHistory(text: string) {
+    setQuery(text);
+    void search(text);
+    record(text);
+  }
 
   async function search(text: string) {
     controller.current?.abort();
     const trimmed = text.trim();
+    lastSearched.current = trimmed.length < 2 ? "" : trimmed;
     if (trimmed.length < 2) {
       setState({ kind: "idle" });
       return;
@@ -45,6 +99,8 @@ export function SearchBox() {
 
   // Recherche avec anti-rebond pendant la frappe.
   useEffect(() => {
+    // Déjà lancée immédiatement (Entrée, historique) : pas de doublon.
+    if (query.trim() === lastSearched.current) return;
     const timer = setTimeout(() => void search(query), DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query]);
@@ -54,6 +110,7 @@ export function SearchBox() {
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     void search(query);
+    record(query);
   }
 
   return (
@@ -72,6 +129,31 @@ export function SearchBox() {
         </button>
       </form>
 
+      {query.trim() === "" && history.length > 0 && (
+        <div className="history">
+          <div className="history-head">
+            <h2>Recherches récentes</h2>
+            <button type="button" className="link-button" onClick={() => void clearHistory()}>
+              Tout effacer
+            </button>
+          </div>
+          <ul className="history-list">
+            {(showAll ? history : history.slice(0, HISTORY_VISIBLE)).map((entry) => (
+              <li key={entry.query.toLowerCase()}>
+                <button type="button" className="history-item" onClick={() => pickHistory(entry.query)}>
+                  {entry.query}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {history.length > HISTORY_VISIBLE && (
+            <button type="button" className="link-button" onClick={() => setShowAll((value) => !value)}>
+              {showAll ? "Réduire" : "Tout afficher"}
+            </button>
+          )}
+        </div>
+      )}
+
       {state.kind === "loading" && <p className="muted">Recherche en cours…</p>}
       {state.kind === "error" && (
         <p role="alert" className="error">
@@ -83,7 +165,7 @@ export function SearchBox() {
         <ul className="results">
           {state.titles.map((title) => (
             <li key={title.id}>
-              <Link href={`/titre/${encodeURIComponent(title.id)}`} className="result">
+              <Link href={`/titre/${encodeURIComponent(title.id)}`} className="result" onClick={() => record(query, true)}>
                 {title.posterUrl ? (
                   <img className="poster" src={title.posterUrl} alt="" loading="lazy" />
                 ) : (
