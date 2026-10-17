@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeftIcon, ArrowPathIcon, CheckCircleIcon, HomeIcon } from "@heroicons/react/24/outline";
 import { availableAtHome } from "@/application/catalog/availableAtHome";
 import { countryBatches } from "@/application/catalog/countryBatches";
 import { countryFlag, countryName } from "@/domain/Country";
@@ -12,6 +14,7 @@ import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
 import { formatRuntime } from "./format";
 import { OfferResults } from "./OfferResults";
+import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
 
 const BATCHES = countryBatches();
@@ -207,7 +210,12 @@ export function TitleView({ id }: { id: string }) {
   }
 
   return (
-    <div>
+    <div className="title-page">
+      <Link href="/" className="back-link">
+        <ArrowLeftIcon aria-hidden="true" />
+        Retour à la recherche
+      </Link>
+
       {titleState.kind === "loading" && <p className="muted">Chargement du titre…</p>}
       {titleState.kind === "not_found" && <p role="alert">Titre introuvable.</p>}
       {titleState.kind === "error" && (
@@ -220,31 +228,23 @@ export function TitleView({ id }: { id: string }) {
       {titleState.kind !== "not_found" && (
         <>
           <div className={status === "stopped" ? "progress warn" : "progress"} aria-live="polite">
-            {status === "loading" && (
-              <span>
-                {checkedCountries} / {TOTAL_COUNTRIES} pays vérifiés…
-              </span>
-            )}
-            {status === "done" && (
-              <span>
-                {TOTAL_COUNTRIES} / {TOTAL_COUNTRIES} pays vérifiés
-              </span>
-            )}
+            <span className="progress-text">
+              {status === "done" && <CheckCircleIcon aria-hidden="true" />}
+              {status === "loading" && `${checkedCountries} / ${TOTAL_COUNTRIES} pays vérifiés…`}
+              {status === "done" && `${TOTAL_COUNTRIES} / ${TOTAL_COUNTRIES} pays vérifiés`}
+              {status === "stopped" &&
+                `${checkedCountries} / ${TOTAL_COUNTRIES} pays vérifiés · ${missingCountries} pays non vérifiés (JustWatch ne répond pas pour le moment)`}
+            </span>
+            {oldestCheck && <span className="progress-note">Données vérifiées {formatCheckedAt(oldestCheck)}</span>}
             {status === "stopped" && (
-              <>
-                <span>
-                  {checkedCountries} / {TOTAL_COUNTRIES} pays vérifiés · {missingCountries} pays non vérifiés
-                  (JustWatch ne répond pas pour le moment)
-                </span>
-                <button type="button" onClick={() => void loadBatches(nextBatchRef.current, refreshRef.current)}>
-                  Réessayer
-                </button>
-              </>
+              <button type="button" className="progress-retry" onClick={() => void loadBatches(nextBatchRef.current, refreshRef.current)}>
+                Réessayer
+              </button>
             )}
-            <button type="button" onClick={refresh} disabled={status === "loading"}>
-              Actualiser
+            <button type="button" className="progress-refresh" aria-label="Actualiser" onClick={refresh} disabled={status === "loading"}>
+              <ArrowPathIcon aria-hidden="true" />
+              <span className="progress-refresh-label">Actualiser</span>
             </button>
-            {oldestCheck && <div className="progress-note muted">Données vérifiées {formatCheckedAt(oldestCheck)}</div>}
             <div className="progress-bar" aria-hidden="true">
               <div style={{ width: `${(checkedCountries / TOTAL_COUNTRIES) * 100}%` }} />
             </div>
@@ -273,6 +273,7 @@ const CAST_VISIBLE = 5;
 function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscription[] }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
+  const { infoRef, posterWidth } = useFitPosterWidth();
   const pills = ratingPills(title);
   const meta = [
     title.year ?? "année inconnue",
@@ -287,82 +288,124 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscript
     longSynopsis && !synopsisOpen ? `${synopsis.slice(0, SYNOPSIS_LIMIT).trimEnd()}…` : synopsis;
   const cast = castOpen ? title.cast : title.cast.slice(0, CAST_VISIBLE);
   return (
-    <header className="title-head">
+    <header
+      className="title-head"
+      style={posterWidth ? ({ "--pw": `${posterWidth}px` } as CSSProperties) : undefined}
+    >
       {title.posterUrl ? (
-        <img className="poster poster-lg" src={title.posterUrl} alt={`Affiche de ${title.name}`} />
+        <img className="title-poster" src={title.posterUrl} alt={`Affiche de ${title.name}`} />
       ) : (
-        <div className="poster poster-lg" />
+        <div className="title-poster" />
       )}
-      <div>
-        <h1>{title.name}</h1>
-        {title.originalTitle && title.originalTitle !== title.name && (
-          <div className="muted original-title">{title.originalTitle}</div>
-        )}
-        <div className="muted">{meta.join(" · ")}</div>
-        <div className="ratings">
-          {pills.map((pill) => {
-            const content = (
-              <>
-                <strong>{pill.label}</strong>
-                {pill.score != null && <span>{nf.format(pill.score)}</span>}
-                {pill.votes != null && <span className="muted">{formatVotes(pill.votes)}</span>}
-              </>
-            );
-            if (pill.score == null && !pill.href) return null;
-            return pill.href ? (
-              <a key={pill.label} className="rating" href={pill.href} target="_blank" rel="noopener noreferrer">
-                {content}
-              </a>
-            ) : (
-              <span key={pill.label} className="rating">
-                {content}
-              </span>
-            );
-          })}
-        </div>
-        {title.directors.length > 0 && (
-          <div className="credit">
-            <span className="muted">{title.type === "MOVIE" ? "Réalisation" : "Création"} :</span>{" "}
-            {title.directors.join(", ")}
+      <div className="title-info" ref={infoRef}>
+        <div className="title-top">
+          <h1>{title.name}</h1>
+          {title.originalTitle && title.originalTitle !== title.name && (
+            <p className="original-title">{title.originalTitle}</p>
+          )}
+          <p className="title-meta">
+            {meta.map((item, index) => (
+              <Fragment key={index}>
+                {index > 0 && (
+                  <span className="title-dot" aria-hidden="true">
+                    ·
+                  </span>
+                )}
+                <span>{item}</span>
+              </Fragment>
+            ))}
+          </p>
+          <div className="ratings">
+            {pills.map((pill) => {
+              const content = (
+                <>
+                  <strong>{pill.label}</strong>
+                  {pill.score != null && <span className="rating-score">{nf.format(pill.score)}</span>}
+                  {pill.votes != null && <span className="rating-votes">{formatVotes(pill.votes)}</span>}
+                </>
+              );
+              if (pill.score == null && !pill.href) return null;
+              return pill.href ? (
+                <a key={pill.label} className="rating" href={pill.href} target="_blank" rel="noopener noreferrer">
+                  {content}
+                </a>
+              ) : (
+                <span key={pill.label} className="rating">
+                  {content}
+                </span>
+              );
+            })}
           </div>
-        )}
+        </div>
         {synopsis && (
           <div className="synopsis">
             <p>{synopsisText}</p>
             {longSynopsis && (
-              <button type="button" className="link-button" onClick={() => setSynopsisOpen(!synopsisOpen)}>
+              <button
+                type="button"
+                className="ghost link-accent"
+                aria-expanded={synopsisOpen}
+                onClick={() => setSynopsisOpen(!synopsisOpen)}
+              >
                 {synopsisOpen ? "Réduire" : "Lire la suite"}
               </button>
             )}
           </div>
         )}
-        {title.cast.length > 0 && (
-          <div className="cast">
-            <span className="muted">Distribution :</span>
-            <ul>
-              {cast.map((member, index) => (
-                <li key={`${member.name}-${index}`}>
-                  {member.name}
-                  {member.character && <span className="muted"> · {member.character}</span>}
-                </li>
-              ))}
-            </ul>
-            {title.cast.length > CAST_VISIBLE && (
-              <button type="button" className="link-button" onClick={() => setCastOpen(!castOpen)}>
-                {castOpen ? "Réduire" : "Voir tout"}
-              </button>
+        {(title.directors.length > 0 || title.cast.length > 0) && (
+          <dl className="credits">
+            {title.directors.length > 0 && (
+              <>
+                <dt>{title.type === "MOVIE" ? "Réalisation" : "Création"}</dt>
+                <dd>{title.directors.join(", ")}</dd>
+              </>
             )}
-          </div>
+            {title.cast.length > 0 && (
+              <>
+                <dt>Distribution</dt>
+                <dd>
+                  {cast.map((member, index) => (
+                    <Fragment key={`${member.name}-${index}`}>
+                      {index > 0 && ", "}
+                      {member.name}
+                      {member.character && <span className="muted"> · {member.character}</span>}
+                    </Fragment>
+                  ))}
+                  {title.cast.length > CAST_VISIBLE && (
+                    <button
+                      type="button"
+                      className="ghost link-accent credits-more"
+                      aria-expanded={castOpen}
+                      onClick={() => setCastOpen(!castOpen)}
+                    >
+                      {castOpen ? "Réduire" : "Voir tout"}
+                    </button>
+                  )}
+                </dd>
+              </>
+            )}
+          </dl>
         )}
-        {atHome.length > 0 && (
-          <div className="at-home" role="status">
-            <strong>Disponible chez moi</strong>
-            <span>
-              {atHome.map((s) => `${s.platform.name} · ${countryName(s.country)} ${countryFlag(s.country)}`).join(" ; ")}
-            </span>
-          </div>
-        )}
-        <WatchlistButton titleId={title.id} />
+        <div className="home-block">
+          {atHome.length > 0 && (
+            <div className="at-home" role="status">
+              <HomeIcon aria-hidden="true" />
+              <div>
+                <strong>Disponible chez moi</strong>
+                <span>
+                  {atHome.map((s, index) => (
+                    <Fragment key={`${s.platform.id}-${s.country}`}>
+                      {index > 0 && " ; "}
+                      {s.platform.name} · <span className="flag" aria-hidden="true">{countryFlag(s.country)}</span>{" "}
+                      {countryName(s.country)}
+                    </Fragment>
+                  ))}
+                </span>
+              </div>
+            </div>
+          )}
+          <WatchlistButton titleId={title.id} />
+        </div>
       </div>
     </header>
   );

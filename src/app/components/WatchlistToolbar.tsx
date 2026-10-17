@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ArrowsUpDownIcon, FunnelIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   filterWatchlist,
   sortWatchlist,
@@ -153,19 +154,22 @@ export function WatchlistToolbar({
           aria-controls={panelId}
           onClick={() => setOpen(!open)}
         >
+          <FunnelIcon aria-hidden="true" />
           Filtres et tri{filtersActive ? " •" : ""}
         </button>
       </div>
       <div id={panelId} className="toolbar-panel" data-open={open}>
         {search && (
-          <input
-            type="search"
-            className="toolbar-search"
-            placeholder="Rechercher dans ma liste"
-            aria-label="Rechercher dans ma liste"
-            value={browser.query}
-            onChange={(event) => browser.setQuery(event.target.value)}
-          />
+          <label className="search-field toolbar-search">
+            <MagnifyingGlassIcon aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Rechercher dans ma liste"
+              aria-label="Rechercher dans ma liste"
+              value={browser.query}
+              onChange={(event) => browser.setQuery(event.target.value)}
+            />
+          </label>
         )}
         <div className="toolbar-fields">
           <div className="toolbar-sort">
@@ -187,7 +191,7 @@ export function WatchlistToolbar({
               aria-pressed={browser.reverse}
               onClick={browser.toggleReverse}
             >
-              {browser.reverse ? "↑" : "↓"}
+              <ArrowsUpDownIcon aria-hidden="true" />
             </button>
           </div>
           <label>

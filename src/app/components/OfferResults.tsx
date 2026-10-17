@@ -1,6 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CheckIcon } from "@heroicons/react/16/solid";
+import {
+  ArrowTopRightOnSquareIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FunnelIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   filterOffers,
   groupOffers,
@@ -70,6 +78,8 @@ export function OfferResults({
   const [audioTouched, setAudioTouched] = useState(false);
   const [subtitlesTouched, setSubtitlesTouched] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Mobile uniquement : panneau de filtres replié par défaut (toujours visible sur grand écran).
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Les préférences s'appliquent une seule fois, sans écraser un choix déjà fait à la main.
   if (!prefsApplied && (defaultAudioLanguage !== undefined || defaultSubtitleLanguage !== undefined)) {
@@ -121,80 +131,144 @@ export function OfferResults({
     });
   }
 
+  function changeAudio(value: string) {
+    setAudioTouched(true);
+    setAudio(value);
+  }
+
+  function changeSubtitles(value: string) {
+    setSubtitlesTouched(true);
+    setSubtitles(value);
+  }
+
   const hasFilters = types.length > 0 || platformIds.length > 0 || audio !== "" || subtitles !== "";
+  const activeFilterCount =
+    (types.length > 0 ? 1 : 0) + (platformIds.length > 0 ? 1 : 0) + (audio !== "" ? 1 : 0) + (subtitles !== "" ? 1 : 0);
 
   return (
-    <div>
+    <div className="offer-results">
       {offers.length > 0 && (
-        <div className="filters">
-          <fieldset className="filter-group">
-            <legend>Type d&apos;offre</legend>
-            {MONETIZATION_TYPES.map((type) => (
-              <label key={type}>
-                <input type="checkbox" checked={types.includes(type)} onChange={() => setTypes(toggle(types, type))} />
-                {MONETIZATION_LABELS[type]}
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className="filter-group">
-            <legend>Plateforme</legend>
-            {visiblePlatformOptions.map((platform) => (
-              <label key={platform.id}>
-                <input
-                  type="checkbox"
-                  checked={platformIds.includes(platform.id)}
-                  onChange={() => setPlatformIds(toggle(platformIds, platform.id))}
-                />
-                {platform.name}
-              </label>
-            ))}
-            {platformOptions.length > PLATFORM_FILTER_LIMIT && (
-              <button type="button" className="link-button" onClick={() => setAllPlatformsShown(!allPlatformsShown)}>
-                {allPlatformsShown ? "Réduire" : `Voir tout (${platformOptions.length})`}
-              </button>
-            )}
-          </fieldset>
-          <div className="selects">
-            <label>
-              <span className="filter-label">
-                Langue audio{audioFromPrefs && <span className="pref-note"> ({defaultAudioLabel})</span>}
-              </span>
-              <select
-                value={audio}
-                onChange={(e) => {
-                  setAudioTouched(true);
-                  setAudio(e.target.value);
-                }}
-              >
-                <option value="">Toutes</option>
-                {audioOptions.map((code) => (
-                  <option key={code} value={code}>
-                    {languageName(code)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="filter-label">
-                Sous-titres{subtitlesFromPrefs && <span className="pref-note"> (préférences)</span>}
-              </span>
-              <select
-                value={subtitles}
-                onChange={(e) => {
-                  setSubtitlesTouched(true);
-                  setSubtitles(e.target.value);
-                }}
-              >
-                <option value="">Toutes</option>
-                {subtitleOptions.map((code) => (
-                  <option key={code} value={code}>
-                    {languageName(code)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
+        <>
+          <section className="filters" aria-label="Filtres">
+            <h2 className="section-title filters-title">
+              <FunnelIcon aria-hidden="true" />
+              Filtres
+            </h2>
+            <button
+              type="button"
+              className="filters-toggle"
+              aria-expanded={filtersOpen}
+              aria-controls="offer-filters-panel"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <FunnelIcon aria-hidden="true" />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="filters-count" aria-label={`${activeFilterCount} filtres actifs`}>
+                  {activeFilterCount}
+                </span>
+              )}
+              {filtersOpen ? (
+                <ChevronUpIcon className="filters-chevron" aria-hidden="true" />
+              ) : (
+                <ChevronDownIcon className="filters-chevron" aria-hidden="true" />
+              )}
+            </button>
+            <div id="offer-filters-panel" className="filters-panel" data-open={filtersOpen}>
+              <fieldset className="filter-group">
+                <legend>Type d&apos;offre</legend>
+                <div className="filter-options">
+                  {MONETIZATION_TYPES.map((type) => (
+                    <label key={type}>
+                      <input
+                        type="checkbox"
+                        checked={types.includes(type)}
+                        onChange={() => setTypes(toggle(types, type))}
+                      />
+                      {MONETIZATION_LABELS[type]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="filter-group">
+                <legend>Plateforme</legend>
+                <div className="filter-options">
+                  {visiblePlatformOptions.map((platform) => (
+                    <label key={platform.id}>
+                      <input
+                        type="checkbox"
+                        checked={platformIds.includes(platform.id)}
+                        onChange={() => setPlatformIds(toggle(platformIds, platform.id))}
+                      />
+                      {platform.name}
+                    </label>
+                  ))}
+                  {platformOptions.length > PLATFORM_FILTER_LIMIT && (
+                    <button
+                      type="button"
+                      className="ghost link-accent"
+                      aria-expanded={allPlatformsShown}
+                      onClick={() => setAllPlatformsShown(!allPlatformsShown)}
+                    >
+                      {allPlatformsShown ? "Réduire" : `Voir tout (${platformOptions.length})`}
+                    </button>
+                  )}
+                </div>
+              </fieldset>
+              <div className="selects">
+                <label>
+                  <span className="filter-label">
+                    Langue audio{audioFromPrefs && <span className="pref-note"> · {defaultAudioLabel}</span>}
+                  </span>
+                  <select value={audio} onChange={(e) => changeAudio(e.target.value)}>
+                    <option value="">Toutes</option>
+                    {audioOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {languageName(code)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="filter-label">
+                    Sous-titres{subtitlesFromPrefs && <span className="pref-note"> · préférences</span>}
+                  </span>
+                  <select value={subtitles} onChange={(e) => changeSubtitles(e.target.value)}>
+                    <option value="">Toutes</option>
+                    {subtitleOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {languageName(code)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* Mobile : filtres de langue actifs, supprimables sans ouvrir le panneau. */}
+          {!filtersOpen && (audio !== "" || subtitles !== "") && (
+            <div className="filter-chips">
+              {audio !== "" && (
+                <span className="filter-chip">
+                  Audio : {languageName(audio)}
+                  {audioFromPrefs ? ` (${defaultAudioLabel})` : ""}
+                  <button type="button" aria-label="Retirer le filtre audio" onClick={() => changeAudio("")}>
+                    <XMarkIcon aria-hidden="true" />
+                  </button>
+                </span>
+              )}
+              {subtitles !== "" && (
+                <span className="filter-chip">
+                  Sous-titres : {languageName(subtitles)}
+                  <button type="button" aria-label="Retirer le filtre sous-titres" onClick={() => changeSubtitles("")}>
+                    <XMarkIcon aria-hidden="true" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {complete && offers.length === 0 && (
@@ -223,7 +297,7 @@ export function OfferResults({
         const showAll = expandedGroups.has(group.id);
         const rows = showAll ? group.countries : group.countries.slice(0, COUNTRY_LIMIT);
         return (
-          <section key={group.id} className="platform">
+          <section key={group.id} className="platform" aria-label={group.name}>
             <div className="platform-head">
               {group.iconUrl ? (
                 <img className="platform-icon" src={group.iconUrl} alt="" loading="lazy" />
@@ -233,15 +307,25 @@ export function OfferResults({
               <div>
                 <div className="platform-name">
                   {group.name}
-                  {group.subscribed && <span className="badge badge-sub">Abonné</span>}
+                  {group.subscribed && (
+                    <span className="badge badge-sub">
+                      <CheckIcon aria-hidden="true" />
+                      Abonné
+                    </span>
+                  )}
                 </div>
-                <div className="muted">disponible dans {group.countryCount} pays</div>
-                {group.platforms.length > 1 && (
-                  <div className="muted platform-includes">
-                    Inclut : {group.platforms.map((p) => p.name).join(", ")}
-                  </div>
-                )}
+                <div className="platform-includes">
+                  Disponible dans {group.countryCount} pays
+                  {group.platforms.length > 1 && ` · inclut ${group.platforms.map((p) => p.name).join(", ")}`}
+                </div>
               </div>
+            </div>
+            <div className="country-head" aria-hidden="true">
+              <span>Pays</span>
+              <span>Audio</span>
+              <span>Sous-titres</span>
+              <span>Offres</span>
+              <span />
             </div>
             <div className="country-list">
               {rows.map((row) => {
@@ -258,13 +342,16 @@ export function OfferResults({
               })}
             </div>
             {group.countries.length > COUNTRY_LIMIT && (
-              <button
-                type="button"
-                className="link-button show-more"
-                onClick={() => toggleIn(setExpandedGroups, group.id)}
-              >
-                {showAll ? "Réduire" : `Voir les ${group.countries.length} pays`}
-              </button>
+              <div className="platform-more">
+                <button
+                  type="button"
+                  className="ghost link-accent"
+                  aria-expanded={showAll}
+                  onClick={() => toggleIn(setExpandedGroups, group.id)}
+                >
+                  {showAll ? "Réduire" : `Voir les ${group.countries.length} pays`}
+                </button>
+              </div>
             )}
           </section>
         );
@@ -285,11 +372,15 @@ function CountryLine({
   onToggle: () => void;
 }) {
   const multiVariant = group.platforms.length > 1;
+  const Chevron = open ? ChevronUpIcon : ChevronDownIcon;
   return (
     <div className="country">
       <button type="button" className="country-row" aria-expanded={open} onClick={onToggle}>
         <span className="country-name">
-          {row.flag} {row.name}
+          <span className="flag" aria-hidden="true">
+            {row.flag}
+          </span>
+          {row.name}
         </span>
         <span>
           <span className="cell-label">Audio : </span>
@@ -301,11 +392,12 @@ function CountryLine({
         </span>
         <span className="type-pills">
           {row.types.map((type) => (
-            <span key={type} className="badge">
+            <span key={type} className={type === "FLATRATE" ? "badge is-sub" : "badge"}>
               {typeSummary(type, row.offers)}
             </span>
           ))}
         </span>
+        <Chevron className="country-chevron" aria-hidden="true" />
       </button>
       {open && (
         <div className="detail">
@@ -313,23 +405,24 @@ function CountryLine({
             const link = offer.deepLinkUrl ?? offer.url;
             return (
               <div key={index} className="detail-offer">
-                <div>
-                  <strong>{MONETIZATION_LABELS[offer.monetizationType]}</strong>
-                  {multiVariant && <span className="muted"> · {offer.platform.name}</span>}
-                </div>
-                <div>
+                <strong>
+                  {MONETIZATION_LABELS[offer.monetizationType]}
+                  {multiVariant && <span className="muted offer-platform"> · {offer.platform.name}</span>}
+                </strong>
+                <span>
                   <span className="badge">{offer.quality}</span>
                   {offer.price ?? "—"}
-                </div>
-                <div>
-                  <strong>Audio :</strong> {languageSummary(offer.audioLanguages, true)}
-                </div>
-                <div>
-                  <strong>Sous-titres :</strong> {languageSummary(offer.subtitleLanguages, true)}
-                </div>
+                </span>
+                <span>
+                  <span className="muted">Audio :</span> {languageSummary(offer.audioLanguages, true)}
+                </span>
+                <span>
+                  <span className="muted">Sous-titres :</span> {languageSummary(offer.subtitleLanguages, true)}
+                </span>
                 {link && (
                   <a href={link} target="_blank" rel="noopener noreferrer">
                     {offer.deepLinkUrl ? `Regarder sur ${offer.platform.name}` : `Voir sur ${offer.platform.name}`}
+                    <ArrowTopRightOnSquareIcon aria-hidden="true" />
                   </a>
                 )}
               </div>

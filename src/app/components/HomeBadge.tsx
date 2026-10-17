@@ -1,4 +1,5 @@
 import type { WatchlistOverviewItem } from "@/application/watchlist/WatchlistOverview";
+import { HomeIcon } from "@heroicons/react/24/solid";
 import { countryName } from "@/domain/Country";
 
 // Élément de la liste à voir tel que reçu en JSON : la date d'ajout est une chaîne ISO
@@ -23,6 +24,7 @@ export function HomeBadge({ item }: { item: Pick<OverviewItem, "availableAtHome"
     .join(", ")}`;
   return (
     <span className="poster-badge" title={label} aria-label={label} role="img">
+      <HomeIcon aria-hidden="true" />
       Chez moi
     </span>
   );

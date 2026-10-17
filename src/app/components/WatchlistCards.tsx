@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BookmarkIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
@@ -42,8 +43,11 @@ export function WatchlistCards() {
   return (
     <section className="watch-cards" aria-labelledby="watch-cards-heading">
       <div className="watch-cards-head">
-        <h2 id="watch-cards-heading">Ma liste à voir</h2>
-        <Link href="/liste" className="muted">
+        <h2 id="watch-cards-heading" className="section-title">
+          <BookmarkIcon aria-hidden="true" />
+          Ma liste à voir
+        </h2>
+        <Link href="/liste">
           Tout voir / modifier
         </Link>
       </div>
