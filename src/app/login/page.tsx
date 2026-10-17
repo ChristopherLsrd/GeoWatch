@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 320, margin: "15vh auto", padding: "0 16px", fontFamily: "system-ui, sans-serif" }}>
+    <main className="login">
       <h1>GeoWatch</h1>
       <form onSubmit={onSubmit}>
         <label htmlFor="password">Mot de passe</label>
@@ -46,13 +46,12 @@ export default function LoginPage() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ display: "block", width: "100%", margin: "8px 0", padding: 8, boxSizing: "border-box" }}
         />
-        <button type="submit" disabled={pending} style={{ padding: "8px 16px" }}>
+        <button type="submit" className="primary" disabled={pending}>
           {pending ? "Connexion…" : "Se connecter"}
         </button>
         {error && (
-          <p role="alert" style={{ color: "#b00020" }}>
+          <p role="alert" className="error">
             {error}
           </p>
         )}
