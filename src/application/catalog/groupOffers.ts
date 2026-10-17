@@ -1,37 +1,40 @@
 // Regroupement et filtrage des offres pour l'affichage. Fonctions pures, utilisables côté client.
 
 import { PRIORITY_1, PRIORITY_2 } from "@/config/countries";
+import { PLATFORM_GROUP_RULES } from "@/config/platformGroups";
 import { countryFlag, countryName, type CountryCode } from "@/domain/Country";
 import type { LanguageCode } from "@/domain/Language";
-import { MONETIZATION_LABELS, MONETIZATION_TYPES, type MonetizationType } from "@/domain/MonetizationType";
+import { MONETIZATION_TYPES, type MonetizationType } from "@/domain/MonetizationType";
 import type { Offer, Platform } from "@/domain/Offer";
 
 export type CountryRow = {
   country: CountryCode;
   name: string;
   flag: string;
-  // Une offre par qualité, de la meilleure à la moins bonne.
+  // Types d'offre présents dans ce pays, dans l'ordre Abonnement, Gratuit, Pub, Location, Achat.
+  types: MonetizationType[];
+  // Toutes les offres du pays (doublons retirés), par type, puis variante, puis qualité.
   offers: Offer[];
   audioLanguages: LanguageCode[];
   subtitleLanguages: LanguageCode[];
 };
 
-export type MonetizationGroup = {
-  type: MonetizationType;
-  label: string;
-  countries: CountryRow[];
-};
-
+// Une plateforme affichée : un service et ses variantes (voir src/config/platformGroups.ts).
 export type PlatformGroup = {
-  platform: Platform;
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  // Plateformes JustWatch réunies, par nom.
+  platforms: Platform[];
   subscribed: boolean;
   countryCount: number;
-  types: MonetizationGroup[];
+  countries: CountryRow[];
 };
 
 export type OfferFilters = {
   monetizationTypes?: MonetizationType[];
-  platformIds?: string[];
+  // Identifiants de PlatformGroup.
+  platformGroupIds?: string[];
   audioLanguage?: LanguageCode;
   subtitleLanguage?: LanguageCode;
 };
@@ -59,50 +62,83 @@ export function filterOffers(offers: Offer[], filters: OfferFilters): Offer[] {
   return offers.filter(
     (offer) =>
       (!filters.monetizationTypes?.length || filters.monetizationTypes.includes(offer.monetizationType)) &&
-      (!filters.platformIds?.length || filters.platformIds.includes(offer.platform.id)) &&
+      (!filters.platformGroupIds?.length || filters.platformGroupIds.includes(platformGroupId(offer.platform))) &&
       (!filters.audioLanguage || offer.audioLanguages.includes(filters.audioLanguage)) &&
       (!filters.subtitleLanguage || offer.subtitleLanguages.includes(filters.subtitleLanguage)),
   );
 }
 
+// Identifiant du groupe d'une plateforme : la règle qui correspond, sinon la plateforme seule.
+export function platformGroupId(platform: Platform): string {
+  const rule = PLATFORM_GROUP_RULES.find((r) => r.match.test(platform.name));
+  return rule ? `group:${rule.key}` : platform.id;
+}
+
+function groupName(id: string, platforms: Platform[]): string {
+  return PLATFORM_GROUP_RULES.find((r) => `group:${r.key}` === id)?.name ?? platforms[0].name;
+}
+
+// Les offres strictement identiques (JustWatch en renvoie parfois plusieurs) ne comptent qu'une fois.
+function dedupe(offers: Offer[]): Offer[] {
+  const seen = new Set<string>();
+  return offers.filter((offer) => {
+    const key = JSON.stringify([
+      offer.country,
+      offer.platform.id,
+      offer.monetizationType,
+      offer.quality,
+      offer.price,
+      offer.audioLanguages,
+      offer.subtitleLanguages,
+    ]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function compareOffers(a: Offer, b: Offer): number {
+  return (
+    MONETIZATION_TYPES.indexOf(a.monetizationType) - MONETIZATION_TYPES.indexOf(b.monetizationType) ||
+    a.platform.name.localeCompare(b.platform.name, "fr") ||
+    qualityRank(a.quality) - qualityRank(b.quality)
+  );
+}
+
 export function groupOffers(offers: Offer[], options: { subscribedPlatformIds?: string[] } = {}): PlatformGroup[] {
   const subscribed = new Set(options.subscribedPlatformIds ?? []);
-  const byPlatform = new Map<string, Offer[]>();
-  for (const offer of offers) {
-    const list = byPlatform.get(offer.platform.id) ?? [];
-    list.push(offer);
-    byPlatform.set(offer.platform.id, list);
+  const byGroup = new Map<string, Offer[]>();
+  for (const offer of dedupe(offers)) {
+    const id = platformGroupId(offer.platform);
+    byGroup.set(id, [...(byGroup.get(id) ?? []), offer]);
   }
 
-  const groups: PlatformGroup[] = [...byPlatform.values()].map((platformOffers) => {
-    const types = MONETIZATION_TYPES.map((type): MonetizationGroup => {
-      const typeOffers = platformOffers.filter((offer) => offer.monetizationType === type);
-      const countries = [...new Set(typeOffers.map((offer) => offer.country))].sort(compareCountries);
-      return {
-        type,
-        label: MONETIZATION_LABELS[type],
-        countries: countries.map((country) => {
-          const countryOffers = typeOffers
-            .filter((offer) => offer.country === country)
-            .sort((a, b) => qualityRank(a.quality) - qualityRank(b.quality));
-          return {
-            country,
-            name: countryName(country),
-            flag: countryFlag(country),
-            offers: countryOffers,
-            audioLanguages: union(countryOffers.map((offer) => offer.audioLanguages)),
-            subtitleLanguages: union(countryOffers.map((offer) => offer.subtitleLanguages)),
-          };
-        }),
-      };
-    }).filter((group) => group.countries.length > 0);
-
-    const platform = platformOffers[0].platform;
+  const groups: PlatformGroup[] = [...byGroup.entries()].map(([id, members]) => {
+    const platforms = [...new Map(members.map((o) => [o.platform.id, o.platform])).values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "fr"),
+    );
+    // Icône du service principal : la variante au nom le plus court (« Netflix », « Canal+ »…).
+    const main = [...platforms].sort((a, b) => a.name.length - b.name.length)[0];
+    const countries = [...new Set(members.map((offer) => offer.country))].sort(compareCountries);
     return {
-      platform,
-      subscribed: subscribed.has(platform.id),
-      countryCount: new Set(platformOffers.map((offer) => offer.country)).size,
-      types,
+      id,
+      name: groupName(id, platforms),
+      iconUrl: main.iconUrl ?? platforms.find((p) => p.iconUrl)?.iconUrl ?? null,
+      platforms,
+      subscribed: platforms.some((p) => subscribed.has(p.id)),
+      countryCount: countries.length,
+      countries: countries.map((country): CountryRow => {
+        const countryOffers = members.filter((offer) => offer.country === country).sort(compareOffers);
+        return {
+          country,
+          name: countryName(country),
+          flag: countryFlag(country),
+          types: MONETIZATION_TYPES.filter((type) => countryOffers.some((o) => o.monetizationType === type)),
+          offers: countryOffers,
+          audioLanguages: union(countryOffers.map((offer) => offer.audioLanguages)),
+          subtitleLanguages: union(countryOffers.map((offer) => offer.subtitleLanguages)),
+        };
+      }),
     };
   });
 
@@ -110,6 +146,6 @@ export function groupOffers(offers: Offer[], options: { subscribedPlatformIds?: 
     (a, b) =>
       Number(b.subscribed) - Number(a.subscribed) ||
       b.countryCount - a.countryCount ||
-      a.platform.name.localeCompare(b.platform.name, "fr"),
+      a.name.localeCompare(b.name, "fr"),
   );
 }

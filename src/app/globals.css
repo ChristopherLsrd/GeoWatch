@@ -152,11 +152,14 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
 .platform-head { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); }
 .platform-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--badge); object-fit: cover; flex: none; }
 .platform-name { font-weight: 700; }
-.type-section { padding: 8px 12px 12px; }
-.type-section h3 { margin: 8px 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.platform-includes { font-size: 0.85rem; }
+.country-list { padding: 4px 12px; }
+.show-more { display: block; margin: 0 12px 12px; }
+.type-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.type-pills .badge { margin-right: 0; }
 
 .country { border-top: 1px solid var(--border); }
-.country:first-of-type { border-top: 0; }
+.country:first-child { border-top: 0; }
 .country-row {
   display: grid;
   grid-template-columns: minmax(130px, 1.2fr) 2fr 2fr minmax(70px, 0.8fr);
