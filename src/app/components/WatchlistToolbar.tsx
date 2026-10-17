@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FunnelIcon } from "@heroicons/react/24/outline";
 import {
   filterWatchlist,
   sortWatchlist,
@@ -153,6 +154,7 @@ export function WatchlistToolbar({
           aria-controls={panelId}
           onClick={() => setOpen(!open)}
         >
+          <FunnelIcon aria-hidden="true" />
           Filtres et tri{filtersActive ? " •" : ""}
         </button>
       </div>

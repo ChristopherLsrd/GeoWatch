@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import {
+  ArrowRightIcon,
+  ExclamationCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  GlobeAltIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -35,27 +45,57 @@ export default function LoginPage() {
 
   return (
     <main className="login">
-      <h1>GeoWatch</h1>
-      <form onSubmit={onSubmit}>
-        <label htmlFor="password">Mot de passe</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          autoFocus
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button type="submit" className="primary" disabled={pending}>
-          {pending ? "Connexion…" : "Se connecter"}
-        </button>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-      </form>
+      <div className="login-box">
+        <div className="login-brand">
+          <span className="login-mark" aria-hidden="true">
+            <GlobeAltIcon />
+          </span>
+          <h1>GeoWatch</h1>
+          <p>Où regarder, partout dans le monde.</p>
+        </div>
+        <form className="login-card" onSubmit={onSubmit}>
+          <label className="login-label" htmlFor="password">
+            Mot de passe
+          </label>
+          <div className={error ? "login-field invalid" : "login-field"}>
+            <LockClosedIcon aria-hidden="true" />
+            <input
+              id="password"
+              type={visible ? "text" : "password"}
+              autoComplete="current-password"
+              autoFocus
+              required
+              value={password}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "password-error" : undefined}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="login-eye"
+              aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              aria-pressed={visible}
+              onClick={() => setVisible((value) => !value)}
+            >
+              {visible ? <EyeSlashIcon aria-hidden="true" /> : <EyeIcon aria-hidden="true" />}
+            </button>
+          </div>
+          {error && (
+            <p id="password-error" role="alert" className="login-error">
+              <ExclamationCircleIcon aria-hidden="true" />
+              {error}
+            </p>
+          )}
+          <button type="submit" className="primary" disabled={pending}>
+            {pending ? "Connexion…" : "Se connecter"}
+            {!pending && <ArrowRightIcon aria-hidden="true" />}
+          </button>
+        </form>
+        <p className="login-foot">
+          <ShieldCheckIcon aria-hidden="true" />
+          Accès privé · session de 30 jours
+        </p>
+      </div>
     </main>
   );
 }
