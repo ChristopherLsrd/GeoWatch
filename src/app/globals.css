@@ -827,6 +827,7 @@ a.rating:hover { border-color: var(--accent); color: var(--text); }
 .credits dd { margin: 0; }
 button.ghost.link-accent { color: var(--accent); font-weight: 600; }
 button.ghost.link-accent:hover:not(:disabled) { color: var(--accent-hover); }
+.synopsis button.ghost.link-accent { padding: 0; border: 0; } /* aligné sur le texte du synopsis */
 .credits .credits-more { display: flex; padding-left: 0; }
 
 /* Barre de tri et de filtres de la liste à voir */
