@@ -3,13 +3,15 @@
 
 import { isCountryCode, type CountryCode } from "@/domain/Country";
 import { isMonetizationType } from "@/domain/MonetizationType";
-import type { Offer } from "@/domain/Offer";
+import type { Offer, Platform } from "@/domain/Offer";
 import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { Title } from "@/domain/Title";
 
 const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
 const IMAGES_URL = "https://images.justwatch.com";
 const TIMEOUT_MS = 20_000;
+// La liste des plateformes d'un pays change rarement.
+const PLATFORMS_TTL_MS = 24 * 3600 * 1000;
 
 const TITLE_FIELDS = `
   id
@@ -33,6 +35,16 @@ const TITLE_QUERY = `
 query GetTitleNode($nodeId: ID!, $country: Country!, $language: Language!) {
   node(id: $nodeId) {
     ... on MovieOrShow { ${TITLE_FIELDS} }
+  }
+}`;
+
+const PACKAGES_QUERY = `
+query GetProviders($country: Country!) {
+  packages(country: $country, platform: WEB, includeAddons: true) {
+    packageId
+    clearName
+    monetizationTypes
+    icon(profile: S100, format: PNG)
   }
 }`;
 
@@ -85,6 +97,7 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
   private readonly language: string;
   private readonly searchResultCount: number;
   private readonly fetch: typeof fetch;
+  private readonly platformsCache = new Map<CountryCode, { platforms: Platform[]; expiresAt: number }>();
 
   constructor(options: JustWatchOptions = {}) {
     this.country = options.country ?? "FR";
@@ -137,6 +150,20 @@ ${OFFER_FRAGMENT}`;
     return Object.fromEntries(
       codes.map((code) => [code, (data.node?.[code] ?? []).map((offer) => toOffer(code, offer)).filter((o) => o !== null)]),
     );
+  }
+
+  async listSubscriptionPlatforms(country: CountryCode): Promise<Platform[]> {
+    const cached = this.platformsCache.get(country);
+    if (cached && cached.expiresAt > Date.now()) return cached.platforms;
+    const data = await this.post<{
+      packages: { packageId: number; clearName: string; monetizationTypes: string[] | null; icon: string | null }[];
+    }>({ operationName: "GetProviders", variables: { country }, query: PACKAGES_QUERY });
+    const platforms = data.packages
+      .filter((p) => p.monetizationTypes?.includes("FLATRATE"))
+      .map((p) => ({ id: String(p.packageId), name: p.clearName, iconUrl: imageUrl(p.icon) }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    this.platformsCache.set(country, { platforms, expiresAt: Date.now() + PLATFORMS_TTL_MS });
+    return platforms;
   }
 
   private async post<T>(body: object): Promise<T> {

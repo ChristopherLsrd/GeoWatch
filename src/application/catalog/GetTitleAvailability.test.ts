@@ -46,6 +46,9 @@ class FakeCatalog implements CatalogProvider {
   async getTitle() {
     return null;
   }
+  async listSubscriptionPlatforms() {
+    return [];
+  }
   async getOffers(_titleId: string, countries: string[]) {
     if (this.failing) throw new CatalogUnavailableError("limité");
     this.calls.push(countries);

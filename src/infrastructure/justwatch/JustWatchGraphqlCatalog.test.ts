@@ -77,6 +77,28 @@ describe("JustWatchGraphqlCatalog", () => {
     ]);
   });
 
+  it("liste les plateformes d'abonnement du pays, triées, et garde la liste en mémoire", async () => {
+    const { fn, calls } = fakeFetch(200, {
+      data: {
+        packages: [
+          { packageId: 8, clearName: "Netflix", monetizationTypes: ["FLATRATE"], icon: "/icon/1/s100/netflix.png" },
+          { packageId: 2, clearName: "Apple TV Store", monetizationTypes: ["RENT", "BUY"], icon: null },
+          { packageId: 381, clearName: "Canal+", monetizationTypes: ["FLATRATE", "ADS"], icon: null },
+        ],
+      },
+    });
+    const catalog = new JustWatchGraphqlCatalog({ fetch: fn });
+    const platforms = await catalog.listSubscriptionPlatforms("FR");
+    await catalog.listSubscriptionPlatforms("FR");
+
+    expect(platforms).toEqual([
+      { id: "381", name: "Canal+", iconUrl: null },
+      { id: "8", name: "Netflix", iconUrl: "https://images.justwatch.com/icon/1/s100/netflix.png" },
+    ]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].variables).toEqual({ country: "FR" });
+  });
+
   it.each([429, 403, 503])("signale le catalogue indisponible sur un HTTP %i", async (status) => {
     const { fn } = fakeFetch(status, {});
     await expect(new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"])).rejects.toBeInstanceOf(

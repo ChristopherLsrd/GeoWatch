@@ -203,6 +203,37 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
 .watch-head .result-title { color: var(--text); text-decoration: none; }
 .watch-head .result-title:hover { color: var(--accent); }
 
+/* Abonnements */
+.badge-sub { margin-left: 8px; background: var(--accent); color: var(--accent-text); vertical-align: middle; }
+.at-home {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 10px;
+  max-width: 480px;
+}
+.sub-list, .platform-picker { list-style: none; margin: 0; padding: 0; }
+.sub-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.sub-item:first-child { border-top: 0; }
+.sub-name { flex: 1; min-width: 0; text-align: left; font-weight: 600; }
+.add-form { margin-top: 24px; }
+.add-form h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.add-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 12px; }
+.add-fields label { display: grid; gap: 4px; }
+.add-fields input { flex: 1; min-width: 180px; }
+.platform-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.platform-choice { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; text-align: left; }
+
 /* Cartes de la liste à voir (accueil) */
 .watch-cards { margin-top: 24px; }
 .watch-cards-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }

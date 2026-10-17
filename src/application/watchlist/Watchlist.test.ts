@@ -46,6 +46,7 @@ function setup() {
       return id === inception.id ? inception : null;
     },
     getOffers: async () => ({}),
+    listSubscriptionPlatforms: async () => [],
   };
   const now = new Date("2026-10-17T10:00:00Z");
   return { repository, catalogCalls, watchlist: new Watchlist(repository, catalog, () => now), now };

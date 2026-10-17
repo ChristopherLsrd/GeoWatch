@@ -21,6 +21,13 @@ export function AppHeader() {
         >
           Ma liste
         </Link>
+        <Link
+          href="/abonnements"
+          className={pathname === "/abonnements" ? "nav-link active" : "nav-link"}
+          aria-current={pathname === "/abonnements" ? "page" : undefined}
+        >
+          Abonnements
+        </Link>
       </nav>
       <LogoutButton />
     </header>

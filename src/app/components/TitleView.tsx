@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { availableAtHome } from "@/application/catalog/availableAtHome";
 import { countryBatches } from "@/application/catalog/countryBatches";
+import { countryFlag, countryName } from "@/domain/Country";
 import type { Offer } from "@/domain/Offer";
+import type { Subscription } from "@/domain/Subscription";
 import type { Title } from "@/domain/Title";
 import { apiFetch } from "./apiFetch";
 import { OfferResults } from "./OfferResults";
@@ -48,6 +51,7 @@ export function TitleView({ id }: { id: string }) {
   const [checkedAt, setCheckedAt] = useState<Record<string, string>>({});
   const [nextBatch, setNextBatch] = useState(0);
   const [status, setStatus] = useState<LoadStatus>("loading");
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 
   const nextBatchRef = useRef(0);
   const refreshRef = useRef(false);
@@ -117,6 +121,29 @@ export function TitleView({ id }: { id: string }) {
     };
   }, [id, loadBatches]);
 
+  // Abonnements chargés en parallèle ; en cas d'échec on continue sans badge.
+  useEffect(() => {
+    const current = new AbortController();
+    (async () => {
+      try {
+        const response = await apiFetch("/api/subscriptions", current.signal);
+        if (!response.ok) return;
+        const body = (await response.json()) as { subscriptions: Subscription[] };
+        if (!current.signal.aborted) setSubscriptions(body.subscriptions);
+      } catch {
+        // pas de badge
+      }
+    })();
+    return () => current.abort();
+  }, []);
+
+  // Calculé sur toutes les offres reçues, pas sur les offres filtrées.
+  const atHome = useMemo(() => availableAtHome(offers, subscriptions), [offers, subscriptions]);
+  const subscribedPlatformIds = useMemo(
+    () => [...new Set(subscriptions.map((s) => s.platform.id))],
+    [subscriptions],
+  );
+
   const checkedCountries = BATCHES.slice(0, nextBatch).reduce((sum, batch) => sum + batch.length, 0);
   const missingCountries = TOTAL_COUNTRIES - checkedCountries;
 
@@ -141,7 +168,7 @@ export function TitleView({ id }: { id: string }) {
           Impossible de charger le titre.
         </p>
       )}
-      {titleState.kind === "ready" && <TitleHeader title={titleState.title} />}
+      {titleState.kind === "ready" && <TitleHeader title={titleState.title} atHome={atHome} />}
 
       {titleState.kind !== "not_found" && (
         <>
@@ -176,14 +203,14 @@ export function TitleView({ id }: { id: string }) {
             </div>
           </div>
 
-          <OfferResults offers={offers} complete={status === "done"} />
+          <OfferResults offers={offers} complete={status === "done"} subscribedPlatformIds={subscribedPlatformIds} />
         </>
       )}
     </div>
   );
 }
 
-function TitleHeader({ title }: { title: Title }) {
+function TitleHeader({ title, atHome }: { title: Title; atHome: Subscription[] }) {
   const links = externalLinks(title);
   return (
     <header className="title-head">
@@ -204,6 +231,14 @@ function TitleHeader({ title }: { title: Title }) {
                 {link.label}
               </a>
             ))}
+          </div>
+        )}
+        {atHome.length > 0 && (
+          <div className="at-home" role="status">
+            <strong>Disponible chez moi</strong>
+            <span>
+              {atHome.map((s) => `${s.platform.name} · ${countryName(s.country)} ${countryFlag(s.country)}`).join(" ; ")}
+            </span>
           </div>
         )}
         <WatchlistButton titleId={title.id} />
