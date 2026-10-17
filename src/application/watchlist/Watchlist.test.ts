@@ -41,6 +41,7 @@ function setup() {
   const catalogCalls: string[] = [];
   const catalog: CatalogProvider = {
     searchTitles: async () => [],
+    getTitleDetails: async () => null,
     getTitle: async (id) => {
       catalogCalls.push(id);
       return id === inception.id ? inception : null;

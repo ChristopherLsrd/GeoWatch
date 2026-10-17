@@ -19,6 +19,7 @@ const jwOffer = {
   currency: "EUR",
   package: { packageId: 8, clearName: "Netflix", icon: "/icon/207360008/s100/netflix.png" },
   standardWebURL: "https://www.netflix.com/title/70131314",
+  deeplinkURL: "https://www.netflix.com/watch/70131314?a=1&amp;b=2",
   audioLanguages: ["fr", "en"],
   subtitleLanguages: null,
 };
@@ -46,8 +47,58 @@ describe("JustWatchGraphqlCatalog", () => {
         audioLanguages: ["fr", "en"],
         subtitleLanguages: [],
         url: "https://www.netflix.com/title/70131314",
+        deepLinkUrl: "https://www.netflix.com/watch/70131314?a=1&b=2",
       },
     ]);
+  });
+
+  it("convertit la fiche complète d'un titre", async () => {
+    const { fn, calls } = fakeFetch(200, {
+      data: {
+        node: {
+          id: "tm92641",
+          objectType: "MOVIE",
+          content: { title: "Inception", originalReleaseYear: 2010, posterUrl: null, externalIds: { imdbId: "tt1375666", tmdbId: "27205" } },
+          details: {
+            originalTitle: "Inception",
+            shortDescription: " Dom Cobb est un voleur. ",
+            runtime: 148,
+            originalReleaseDate: "2010-07-14",
+            genres: [{ translation: "Action & Aventure" }, { translation: null }],
+            scoring: { imdbScore: 8.8, imdbVotes: 2880387, tmdbScore: 8.373 },
+            credits: [
+              { role: "ACTOR", name: "Leonardo DiCaprio", characterName: "Dom Cobb" },
+              { role: "DIRECTOR", name: "Christopher Nolan", characterName: "" },
+              { role: "ACTOR", name: "Elliot Page", characterName: "" },
+            ],
+          },
+        },
+      },
+    });
+    const title = await new JustWatchGraphqlCatalog({ fetch: fn }).getTitleDetails("tm92641");
+    expect(calls[0].variables).toMatchObject({ nodeId: "tm92641", country: "FR", language: "fr" });
+    expect(title).toEqual({
+      id: "tm92641",
+      type: "MOVIE",
+      name: "Inception",
+      year: 2010,
+      posterUrl: null,
+      imdbId: "tt1375666",
+      tmdbId: "27205",
+      originalTitle: "Inception",
+      synopsis: "Dom Cobb est un voleur.",
+      runtime: 148,
+      releaseDate: "2010-07-14",
+      genres: ["Action & Aventure"],
+      imdbScore: 8.8,
+      imdbVotes: 2880387,
+      tmdbScore: 8.373,
+      directors: ["Christopher Nolan"],
+      cast: [
+        { name: "Leonardo DiCaprio", character: "Dom Cobb" },
+        { name: "Elliot Page", character: null },
+      ],
+    });
   });
 
   it("convertit les résultats de recherche et ignore ce qui n'est ni un film ni une série", async () => {

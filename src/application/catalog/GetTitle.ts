@@ -1,10 +1,10 @@
 import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
-import type { Title } from "@/domain/Title";
+import type { TitleDetails } from "@/domain/TitleDetails";
 
 export class GetTitle {
   constructor(private readonly catalog: CatalogProvider) {}
 
-  execute(titleId: string): Promise<Title | null> {
-    return this.catalog.getTitle(titleId);
+  execute(titleId: string): Promise<TitleDetails | null> {
+    return this.catalog.getTitleDetails(titleId);
   }
 }

@@ -386,3 +386,16 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
 .pref-form select { width: 100%; }
 .pref-note { font-size: 0.85em; color: var(--muted); font-weight: 400; }
 .filter-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* Fiche titre */
+.original-title { font-size: 0.9rem; margin-bottom: 2px; }
+.ratings { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.rating { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--badge); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; text-decoration: none; }
+a.rating:hover { border-color: var(--accent); }
+.rating .muted { font-size: 0.8rem; }
+.credit { margin-top: 10px; }
+.synopsis { margin-top: 10px; max-width: 70ch; }
+.synopsis p { margin: 0 0 4px; line-height: 1.5; }
+.cast { margin-top: 10px; }
+.cast ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.cast .link-button { margin-top: 4px; }

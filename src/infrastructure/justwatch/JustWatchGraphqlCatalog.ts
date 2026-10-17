@@ -6,6 +6,7 @@ import { isMonetizationType } from "@/domain/MonetizationType";
 import type { Offer, Platform } from "@/domain/Offer";
 import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { Title } from "@/domain/Title";
+import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
 
 const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
 const IMAGES_URL = "https://images.justwatch.com";
@@ -38,6 +39,24 @@ query GetTitleNode($nodeId: ID!, $country: Country!, $language: Language!) {
   }
 }`;
 
+const TITLE_DETAILS_QUERY = `
+query GetTitleDetails($nodeId: ID!, $country: Country!, $language: Language!) {
+  node(id: $nodeId) {
+    ... on MovieOrShow {
+      ${TITLE_FIELDS}
+      details: content(country: $country, language: $language) {
+        originalTitle
+        shortDescription
+        runtime
+        originalReleaseDate
+        genres { translation(language: $language) }
+        scoring { imdbScore imdbVotes tmdbScore }
+        credits { role name characterName }
+      }
+    }
+  }
+}`;
+
 const PACKAGES_QUERY = `
 query GetProviders($country: Country!) {
   packages(country: $country, platform: WEB, includeAddons: true) {
@@ -57,6 +76,7 @@ fragment TitleOffer on Offer {
   currency
   package { packageId clearName icon(profile: S100, format: PNG) }
   standardWebURL
+  deeplinkURL(platform: WEB)
   audioLanguages
   subtitleLanguages
 }`;
@@ -72,6 +92,18 @@ type JustWatchTitle = {
   };
 };
 
+type JustWatchTitleDetails = JustWatchTitle & {
+  details: {
+    originalTitle: string | null;
+    shortDescription: string | null;
+    runtime: number | null;
+    originalReleaseDate: string | null;
+    genres: { translation: string | null }[] | null;
+    scoring: { imdbScore: number | null; imdbVotes: number | null; tmdbScore: number | null } | null;
+    credits: { role: string; name: string; characterName: string | null }[] | null;
+  } | null;
+};
+
 type JustWatchOffer = {
   monetizationType: string;
   presentationType: string;
@@ -80,6 +112,7 @@ type JustWatchOffer = {
   currency: string | null;
   package: { packageId: number; clearName: string; icon: string | null };
   standardWebURL: string | null;
+  deeplinkURL: string | null;
   audioLanguages: string[] | null;
   subtitleLanguages: string[] | null;
 };
@@ -127,6 +160,17 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
       query: TITLE_QUERY,
     });
     return data.node?.content ? toTitle(data.node) : null;
+  }
+
+  async getTitleDetails(titleId: string): Promise<TitleDetails | null> {
+    const data = await this.post<{ node: JustWatchTitleDetails | null }>({
+      operationName: "GetTitleDetails",
+      variables: { nodeId: titleId, country: this.country, language: this.language },
+      query: TITLE_DETAILS_QUERY,
+    });
+    if (!data.node?.content) return null;
+    const title = toTitle(data.node);
+    return title ? toTitleDetails(title, data.node.details) : null;
   }
 
   // Une seule requête pour plusieurs pays, grâce à un alias GraphQL par pays.
@@ -209,6 +253,31 @@ function toTitle(node: JustWatchTitle): Title | null {
   };
 }
 
+function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"]): TitleDetails {
+  const credits = details?.credits ?? [];
+  return {
+    ...title,
+    originalTitle: details?.originalTitle || null,
+    synopsis: details?.shortDescription?.trim() || null,
+    runtime: details?.runtime || null,
+    releaseDate: details?.originalReleaseDate ?? null,
+    genres: (details?.genres ?? []).map((g) => g.translation).filter((g): g is string => !!g),
+    imdbScore: details?.scoring?.imdbScore ?? null,
+    imdbVotes: details?.scoring?.imdbVotes ?? null,
+    tmdbScore: details?.scoring?.tmdbScore ?? null,
+    directors: credits.filter((c) => c.role === "DIRECTOR").map((c) => c.name),
+    cast: credits
+      .filter((c) => c.role === "ACTOR")
+      .slice(0, MAX_CAST)
+      .map((c) => ({ name: c.name, character: c.characterName || null })),
+  };
+}
+
+function cleanUrl(url: string | null | undefined): string | null {
+  // Certaines URL arrivent échappées pour du HTML.
+  return url?.replace(/&amp;/g, "&") ?? null;
+}
+
 function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
   if (!isMonetizationType(offer.monetizationType)) return null;
   return {
@@ -226,7 +295,8 @@ function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
     currency: offer.currency ?? null,
     audioLanguages: offer.audioLanguages ?? [],
     subtitleLanguages: offer.subtitleLanguages ?? [],
-    // Certaines URL arrivent échappées pour du HTML.
-    url: offer.standardWebURL?.replace(/&amp;/g, "&") ?? null,
+    url: cleanUrl(offer.standardWebURL),
+    // Lien qui ouvre directement la lecture sur la plateforme, quand JustWatch le connaît.
+    deepLinkUrl: cleanUrl(offer.deeplinkURL),
   };
 }

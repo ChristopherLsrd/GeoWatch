@@ -272,9 +272,9 @@ function CountryLine({
               <div>
                 <strong>Sous-titres :</strong> {languageSummary(offer.subtitleLanguages, true)}
               </div>
-              {offer.url && (
-                <a href={offer.url} target="_blank" rel="noopener noreferrer">
-                  Voir sur {platformName}
+              {(offer.deepLinkUrl ?? offer.url) && (
+                <a href={(offer.deepLinkUrl ?? offer.url) as string} target="_blank" rel="noopener noreferrer">
+                  {offer.deepLinkUrl ? `Regarder sur ${platformName}` : `Voir sur ${platformName}`}
                 </a>
               )}
             </div>

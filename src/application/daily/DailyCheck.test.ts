@@ -40,6 +40,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   const requests: string[][] = [];
   const catalog: CatalogProvider = {
     searchTitles: async () => [],
+    getTitleDetails: async () => null,
     getTitle: async () => null,
     listSubscriptionPlatforms: async () => [],
     getOffers: async (titleId, countries) => {
