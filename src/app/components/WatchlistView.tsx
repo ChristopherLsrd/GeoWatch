@@ -6,6 +6,7 @@ import { apiFetch } from "./apiFetch";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 import { removeFromWatchlist } from "./watchlistApi";
 import { WatchlistNote } from "./WatchlistNote";
+import { useShowNotes, useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 
 // L'API renvoie la date d'ajout en chaîne ISO.
 type Item = OverviewItem;
@@ -14,8 +15,33 @@ type State = { kind: "loading" } | { kind: "ready"; items: Item[] } | { kind: "e
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
 
+// Note d'un titre : toujours dépliée, ou repliée derrière un petit bouton quand les notes sont masquées.
+function NoteSlot({ item, showAll, onSaved }: { item: Item; showAll: boolean; onSaved: (note: string) => void }) {
+  const [open, setOpen] = useState(false);
+  if (showAll || open) {
+    return (
+      <>
+        <WatchlistNote titleId={item.title.id} note={item.note} onSaved={onSaved} />
+        {!showAll && (
+          <button type="button" className="link-button note-toggle" onClick={() => setOpen(false)}>
+            Masquer la note
+          </button>
+        )}
+      </>
+    );
+  }
+  return (
+    <button type="button" className="note-toggle" onClick={() => setOpen(true)}>
+      {item.note ? "Note" : "Ajouter une note"}
+    </button>
+  );
+}
+
 export function WatchlistView() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  const items = state.kind === "ready" ? state.items : [];
+  const browser = useWatchlistBrowser(items, "geowatch:sort:list");
+  const [showNotes, setShowNotes] = useShowNotes("geowatch:list:notes");
   const [error, setError] = useState<string | null>(null);
 
   async function load(signal?: AbortSignal) {
@@ -81,16 +107,20 @@ export function WatchlistView() {
 
   return (
     <div>
-      <p className="muted">
-        {state.items.length} {state.items.length > 1 ? "titres" : "titre"}
-      </p>
+      <WatchlistToolbar
+        browser={browser}
+        search
+        idPrefix="list-toolbar"
+        notes={{ show: showNotes, onChange: setShowNotes }}
+      />
       {error && (
         <p role="alert" className="error">
           {error}
         </p>
       )}
+      {browser.visible.length === 0 && <p className="muted toolbar-empty">Aucun titre ne correspond.</p>}
       <ul className="results">
-        {state.items.map((item) => (
+        {browser.visible.map((item) => (
           <li key={item.title.id} className="watch-item">
             <div className="poster-wrap">
               {item.title.posterUrl ? (
@@ -118,11 +148,7 @@ export function WatchlistView() {
                   Retirer
                 </button>
               </div>
-              <WatchlistNote
-                titleId={item.title.id}
-                note={item.note}
-                onSaved={(note) => noteSaved(item.title.id, note)}
-              />
+              <NoteSlot item={item} showAll={showNotes} onSaved={(note) => noteSaved(item.title.id, note)} />
             </div>
           </li>
         ))}
