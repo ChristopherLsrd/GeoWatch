@@ -25,6 +25,8 @@ Application à un seul utilisateur, protégée par mot de passe, déployée sur 
 - **API GraphQL non officielle de JustWatch** : titres, offres par pays, langues audio et sous-titres. Elle n'est pas documentée, peut changer sans préavis, et n'est tolérée que pour un usage privé et non commercial. Les appels se font uniquement côté serveur. Les disponibilités sont mises en cache pour la journée (heure de Paris) afin de limiter le volume de requêtes.
 - **TMDB** (facultatif) : langue originale des titres, pour la préférence « Version originale ».
 
+Les drapeaux des pays viennent de la police TwemojiCountryFlags (projet [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill), graphismes [Twemoji](https://github.com/jdecked/twemoji) sous licence CC-BY 4.0), intégrée à l'application parce que Windows n'affiche pas les emoji de drapeaux.
+
 ## Stack
 
 - **Next.js 15** (App Router), **React 19** et **TypeScript**.

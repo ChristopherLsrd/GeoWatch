@@ -15,3 +15,6 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .vercel/
+
+# Maquettes de la refonte graphique (locales)
+geowatch-design/

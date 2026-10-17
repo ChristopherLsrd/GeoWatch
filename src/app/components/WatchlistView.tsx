@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PencilIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
@@ -16,25 +17,69 @@ type State = { kind: "loading" } | { kind: "ready"; items: Item[] } | { kind: "e
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
 
-// Note d'un titre : toujours dépliée, ou repliée derrière un petit bouton quand les notes sont masquées.
-function NoteSlot({ item, showAll, onSaved }: { item: Item; showAll: boolean; onSaved: (note: string) => void }) {
+// Un titre de la liste : carte avec affiche, infos, actions et note.
+// La note est toujours dépliée, ou repliée derrière un petit bouton quand les notes sont masquées.
+function WatchItem({
+  item,
+  showAll,
+  onRemove,
+  onSaved,
+}: {
+  item: Item;
+  showAll: boolean;
+  onRemove: () => void;
+  onSaved: (note: string) => void;
+}) {
   const [open, setOpen] = useState(false);
-  if (showAll || open) {
-    return (
-      <>
-        <WatchlistNote titleId={item.title.id} note={item.note} onSaved={onSaved} />
-        {!showAll && (
-          <button type="button" className="link-button note-toggle" onClick={() => setOpen(false)}>
-            Masquer la note
-          </button>
-        )}
-      </>
-    );
-  }
+  const noteVisible = showAll || open;
+  const directors = directorsLabel(item.details);
+
   return (
-    <button type="button" className="note-toggle" onClick={() => setOpen(true)}>
-      {item.note ? "Note" : "Ajouter une note"}
-    </button>
+    <li className="watch-item">
+      <div className="poster-wrap">
+        {item.title.posterUrl ? (
+          <img className="poster" src={item.title.posterUrl} alt={`Affiche de ${item.title.name}`} />
+        ) : (
+          <div className="poster" />
+        )}
+        <HomeBadge item={item} />
+      </div>
+      <div className="watch-body">
+        <div className="watch-head">
+          <div>
+            <Link href={`/titre/${encodeURIComponent(item.title.id)}`} className="watch-title">
+              {item.title.name}
+            </Link>
+            <p className="watch-meta">
+              {yearWithRuntime(item.title.year, item.details?.runtime) || "année inconnue"} · {item.title.type === "MOVIE" ? "Film" : "Série"} · ajouté le{" "}
+              {formatDate(item.addedAt)}
+            </p>
+            {directors && <p className="watch-meta">De {directors}</p>}
+          </div>
+          <div className="watch-actions">
+            {!noteVisible && (
+              <button type="button" className="ghost" onClick={() => setOpen(true)}>
+                {item.note ? <PencilIcon aria-hidden="true" /> : <PlusIcon aria-hidden="true" />}
+                {item.note ? "Note" : "Ajouter une note"}
+              </button>
+            )}
+            <button type="button" className="ghost ghost-danger" onClick={onRemove}>
+              <TrashIcon aria-hidden="true" />
+              Retirer
+            </button>
+          </div>
+        </div>
+        {noteVisible && (
+          <WatchlistNote titleId={item.title.id} note={item.note} onSaved={onSaved}>
+            {!showAll && (
+              <button type="button" className="ghost" onClick={() => setOpen(false)}>
+                Masquer la note
+              </button>
+            )}
+          </WatchlistNote>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -107,7 +152,7 @@ export function WatchlistView() {
   }
 
   return (
-    <div>
+    <div className="watch-list">
       <WatchlistToolbar
         browser={browser}
         search
@@ -122,36 +167,13 @@ export function WatchlistView() {
       {browser.visible.length === 0 && <p className="muted toolbar-empty">Aucun titre ne correspond.</p>}
       <ul className="results">
         {browser.visible.map((item) => (
-          <li key={item.title.id} className="watch-item">
-            <div className="poster-wrap">
-              {item.title.posterUrl ? (
-                <img className="poster" src={item.title.posterUrl} alt={`Affiche de ${item.title.name}`} />
-              ) : (
-                <div className="poster" />
-              )}
-              <HomeBadge item={item} />
-            </div>
-            <div className="watch-body">
-              <div className="watch-head">
-                <div>
-                  <Link href={`/titre/${encodeURIComponent(item.title.id)}`} className="result-title">
-                    {item.title.name}
-                  </Link>
-                  <div className="muted">
-                    {yearWithRuntime(item.title.year, item.details?.runtime) || "année inconnue"} · {item.title.type === "MOVIE" ? "Film" : "Série"} · ajouté le{" "}
-                    {formatDate(item.addedAt)}
-                  </div>
-                  {directorsLabel(item.details) && (
-                    <div className="muted">De {directorsLabel(item.details)}</div>
-                  )}
-                </div>
-                <button type="button" onClick={() => void remove(item)}>
-                  Retirer
-                </button>
-              </div>
-              <NoteSlot item={item} showAll={showNotes} onSaved={(note) => noteSaved(item.title.id, note)} />
-            </div>
-          </li>
+          <WatchItem
+            key={item.title.id}
+            item={item}
+            showAll={showNotes}
+            onRemove={() => void remove(item)}
+            onSaved={(note) => noteSaved(item.title.id, note)}
+          />
         ))}
       </ul>
     </div>

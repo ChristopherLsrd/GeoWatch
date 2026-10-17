@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { countryFlag, countryName } from "../../domain/Country";
+import { BellIcon, HomeIcon, LanguageIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 
 type AlertItem = {
@@ -76,8 +77,11 @@ export function AlertsPanel() {
   return (
     <section className="alerts" aria-labelledby="alerts-heading">
       <div className="alerts-head">
-        <h2 id="alerts-heading">Nouveautés de ma liste</h2>
-        <button type="button" className="alerts-clear" onClick={dismissAll}>
+        <h2 id="alerts-heading" className="section-title">
+          <BellIcon aria-hidden="true" />
+          Nouveautés de ma liste
+        </h2>
+        <button type="button" className="ghost" onClick={dismissAll}>
           Tout masquer
         </button>
       </div>
@@ -90,6 +94,9 @@ export function AlertsPanel() {
               ) : (
                 <div className="alert-poster" />
               )}
+              <span className="alert-kind" aria-hidden="true">
+                {alert.kind === "AT_HOME" ? <HomeIcon /> : <LanguageIcon />}
+              </span>
               <span className="alert-text">
                 <strong>{alert.title.name}</strong>
                 {alert.kind === "AT_HOME" ? (
@@ -99,12 +106,20 @@ export function AlertsPanel() {
                       <img className="alert-platform-icon" src={alert.platform.iconUrl} alt="" />
                     )}
                     {alert.platform?.name ?? "une de vos plateformes"}
-                    {alert.country && ` (${countryFlag(alert.country)} ${countryName(alert.country)})`}
+                    {alert.country && (
+                      <>
+                        {" ("}
+                        <span className="flag" aria-hidden="true">
+                          {countryFlag(alert.country)}
+                        </span>{" "}
+                        {countryName(alert.country)})
+                      </>
+                    )}
                   </>
                 ) : (
                   " est maintenant disponible en VF"
                 )}
-                <span className="alert-date muted">{formatDate(alert.createdAt)}</span>
+                <span className="alert-date">{formatDate(alert.createdAt)}</span>
               </span>
             </Link>
             <button
@@ -113,7 +128,7 @@ export function AlertsPanel() {
               aria-label="Masquer cette nouveauté"
               onClick={() => dismiss(alert)}
             >
-              ×
+              <XMarkIcon aria-hidden="true" />
             </button>
           </li>
         ))}

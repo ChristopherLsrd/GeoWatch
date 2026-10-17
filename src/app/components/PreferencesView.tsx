@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  CheckCircleIcon,
+  ChatBubbleBottomCenterTextIcon,
+  InformationCircleIcon,
+  SpeakerWaveIcon,
+} from "@heroicons/react/24/outline";
 import { PREFERENCE_LANGUAGES } from "@/config/languages";
 import { languageName } from "@/domain/Language";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
@@ -96,45 +102,62 @@ export function PreferencesView() {
 
   return (
     <form className="pref-form" onSubmit={(e) => void save(e)}>
-      <p className="muted">
-        Ces langues pré-remplissent les filtres sur la page d&apos;un titre. Vous pouvez toujours les changer.
-      </p>
-      <label>
-        <span className="filter-label">Langue audio par défaut</span>
-        <select value={audio} onChange={(e) => setAudio(e.target.value)}>
-          <option value="">Aucune</option>
-          <option value={ORIGINAL_LANGUAGE}>Version originale</option>
-          {optionsFor(saved.audioLanguage || audio).map((code) => (
-            <option key={code} value={code}>
-              {languageName(code)}
-            </option>
-          ))}
-        </select>
-        {audio === ORIGINAL_LANGUAGE && (
-          <span className="muted">La langue originale de chaque titre (films étrangers en VO).</span>
-        )}
-      </label>
-      <label>
-        <span className="filter-label">Sous-titres par défaut</span>
-        <select value={subtitles} onChange={(e) => setSubtitles(e.target.value)}>
-          <option value="">Aucune</option>
-          {optionsFor(saved.subtitleLanguage || subtitles).map((code) => (
-            <option key={code} value={code}>
-              {languageName(code)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div>
+      <div className="pref-field">
+        <span className="pref-icon">
+          <SpeakerWaveIcon aria-hidden="true" />
+        </span>
+        <label className="pref-label" htmlFor="pref-audio">
+          Langue audio par défaut
+        </label>
+        <p className="pref-help">Appliquée au filtre « Langue audio ».</p>
+        <div>
+          <select id="pref-audio" value={audio} onChange={(e) => setAudio(e.target.value)}>
+            <option value="">Aucune</option>
+            <option value={ORIGINAL_LANGUAGE}>Version originale</option>
+            {optionsFor(saved.audioLanguage || audio).map((code) => (
+              <option key={code} value={code}>
+                {languageName(code)}
+              </option>
+            ))}
+          </select>
+          {audio === ORIGINAL_LANGUAGE && (
+            <p className="pref-hint">
+              <InformationCircleIcon aria-hidden="true" />
+              <span>La langue originale de chaque titre (films étrangers en VO).</span>
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="pref-field">
+        <span className="pref-icon">
+          <ChatBubbleBottomCenterTextIcon aria-hidden="true" />
+        </span>
+        <label className="pref-label" htmlFor="pref-subtitles">
+          Sous-titres par défaut
+        </label>
+        <p className="pref-help">Appliqués au filtre « Sous-titres ».</p>
+        <div>
+          <select id="pref-subtitles" value={subtitles} onChange={(e) => setSubtitles(e.target.value)}>
+            <option value="">Aucune</option>
+            {optionsFor(saved.subtitleLanguage || subtitles).map((code) => (
+              <option key={code} value={code}>
+                {languageName(code)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="pref-foot">
         <button type="submit" className="primary" disabled={!changed || sending}>
           Enregistrer
         </button>
+        {message && (
+          <p role={message.ok ? "status" : "alert"} className={message.ok ? "pref-saved" : "error"}>
+            {message.ok && <CheckCircleIcon aria-hidden="true" />}
+            {message.text}
+          </p>
+        )}
       </div>
-      {message && (
-        <p role={message.ok ? "status" : "alert"} className={message.ok ? "muted" : "error"}>
-          {message.text}
-        </p>
-      )}
     </form>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CheckIcon, MagnifyingGlassIcon, PlusCircleIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { JUSTWATCH_COUNTRIES, PRIORITY_1 } from "@/config/countries";
 import { countryFlag, countryName } from "@/domain/Country";
 import type { Platform } from "@/domain/Offer";
@@ -83,42 +84,49 @@ export function SubscriptionsView() {
   }
 
   return (
-    <div>
-      {list.kind === "loading" && <p className="muted">Chargement…</p>}
-      {list.kind === "error" && (
-        <p role="alert" className="error">
-          Impossible de charger les abonnements.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {list.kind === "ready" && groups.length === 0 && (
-        <p className="muted">
-          Aucun abonnement. Ajoutez vos plateformes pour voir le badge « disponible chez moi ».
-        </p>
-      )}
-      {groups.map(([country, items]) => (
-        <section key={country} className="platform">
-          <div className="platform-head">
-            <span aria-hidden="true">{countryFlag(country)}</span>
-            <div className="platform-name">{countryName(country)}</div>
-          </div>
-          <ul className="sub-list">
-            {items.map((subscription) => (
-              <li key={subscription.platform.id} className="sub-item">
-                <PlatformIcon platform={subscription.platform} />
-                <span className="sub-name">{subscription.platform.name}</span>
-                <button type="button" onClick={() => void remove(subscription)}>
-                  Retirer
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+    <div className="sub-cols">
+      <div className="sub-mine">
+        {list.kind === "loading" && <p className="muted">Chargement…</p>}
+        {list.kind === "error" && (
+          <p role="alert" className="error">
+            Impossible de charger les abonnements.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {list.kind === "ready" && groups.length === 0 && (
+          <p className="muted">
+            Aucun abonnement. Ajoutez vos plateformes pour voir le badge « disponible chez moi ».
+          </p>
+        )}
+        {groups.map(([country, items]) => (
+          <section key={country} className="sub-group" aria-label={countryName(country)}>
+            <div className="sub-group-head">
+              <span className="flag" aria-hidden="true">
+                {countryFlag(country)}
+              </span>
+              <span>{countryName(country)}</span>
+              <span className="sub-group-count">
+                {items.length} {items.length > 1 ? "plateformes" : "plateforme"}
+              </span>
+            </div>
+            <ul className="sub-list">
+              {items.map((subscription) => (
+                <li key={subscription.platform.id} className="sub-item">
+                  <PlatformIcon platform={subscription.platform} />
+                  <span className="sub-name">{subscription.platform.name}</span>
+                  <button type="button" className="ghost ghost-danger" onClick={() => void remove(subscription)}>
+                    Retirer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       {list.kind === "ready" && <AddForm subscriptions={subscriptions} onAdded={add} />}
     </div>
@@ -127,9 +135,9 @@ export function SubscriptionsView() {
 
 function PlatformIcon({ platform }: { platform: Platform }) {
   return platform.iconUrl ? (
-    <img className="platform-icon" src={platform.iconUrl} alt="" loading="lazy" />
+    <img className="sub-icon" src={platform.iconUrl} alt="" loading="lazy" />
   ) : (
-    <div className="platform-icon" />
+    <div className="sub-icon" />
   );
 }
 
@@ -199,7 +207,10 @@ function AddForm({
 
   return (
     <section className="add-form">
-      <h2>Ajouter un abonnement</h2>
+      <h2 className="section-title">
+        <PlusCircleIcon aria-hidden="true" />
+        Ajouter un abonnement
+      </h2>
       <div className="add-fields">
         <label>
           <span className="filter-label">Pays</span>
@@ -217,13 +228,19 @@ function AddForm({
             ))}
           </select>
         </label>
-        <input
-          type="search"
-          placeholder="Filtrer les plateformes…"
-          aria-label="Filtrer les plateformes"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+        <label>
+          <span className="filter-label">Plateforme</span>
+          <span className="search-field">
+            <MagnifyingGlassIcon aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Filtrer les plateformes…"
+              aria-label="Filtrer les plateformes"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </span>
+        </label>
       </div>
 
       {error && (
@@ -252,7 +269,14 @@ function AddForm({
                 >
                   <PlatformIcon platform={platform} />
                   <span className="sub-name">{platform.name}</span>
-                  {already && <span className="badge">Ajouté</span>}
+                  {already ? (
+                    <span className="badge badge-sub">
+                      <CheckIcon aria-hidden="true" />
+                      Ajouté
+                    </span>
+                  ) : (
+                    <PlusIcon className="choice-plus" aria-hidden="true" />
+                  )}
                 </button>
               </li>
             );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Title } from "@/domain/Title";
+import { ClockIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 
 type State =
@@ -114,16 +115,19 @@ export function SearchBox() {
   }
 
   return (
-    <section>
+    <section className="search-box">
       <form className="search-form" onSubmit={onSubmit} role="search">
-        <input
-          type="search"
-          aria-label="Rechercher un film ou une série"
-          placeholder="Rechercher un film ou une série…"
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label className="search-field">
+          <MagnifyingGlassIcon aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Rechercher un film ou une série"
+            placeholder="Rechercher un film ou une série…"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
         <button type="submit" className="primary">
           Rechercher
         </button>
@@ -132,8 +136,11 @@ export function SearchBox() {
       {query.trim() === "" && history.length > 0 && (
         <div className="history">
           <div className="history-head">
-            <h2>Recherches récentes</h2>
-            <button type="button" className="link-button" onClick={() => void clearHistory()}>
+            <h2>
+              <ClockIcon aria-hidden="true" />
+              Recherches récentes
+            </h2>
+            <button type="button" className="ghost" onClick={() => void clearHistory()}>
               Tout effacer
             </button>
           </div>
@@ -141,7 +148,8 @@ export function SearchBox() {
             {(showAll ? history : history.slice(0, HISTORY_VISIBLE)).map((entry) => (
               <li key={entry.query.toLowerCase()}>
                 <button type="button" className="history-item" onClick={() => pickHistory(entry.query)}>
-                  {entry.query}
+                  <MagnifyingGlassIcon aria-hidden="true" />
+                  <span>{entry.query}</span>
                 </button>
               </li>
             ))}

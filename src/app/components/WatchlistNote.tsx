@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { MAX_NOTE_LENGTH } from "@/domain/WatchlistItem";
 import { saveNote } from "./watchlistApi";
 
@@ -11,11 +12,14 @@ export function WatchlistNote({
   titleId,
   note,
   onSaved,
+  children,
 }: {
   titleId: string;
   // Dernière note enregistrée (connue du parent).
   note: string;
   onSaved: (note: string) => void;
+  // Actions supplémentaires, affichées à la fin de la ligne d'actions.
+  children?: ReactNode;
 }) {
   const [draft, setDraft] = useState(note);
   const [state, setState] = useState<SaveState>("idle");
@@ -33,7 +37,10 @@ export function WatchlistNote({
   return (
     <div className="note">
       <label className="note-label">
-        Note perso
+        <span className="note-title">
+          <PencilIcon aria-hidden="true" />
+          Note perso
+        </span>
         <textarea
           value={draft}
           maxLength={MAX_NOTE_LENGTH}
@@ -55,6 +62,7 @@ export function WatchlistNote({
           {state === "saved" && !dirty && <span className="muted">Enregistré</span>}
           {typeof state === "object" && <span className="error">{state.error}</span>}
         </span>
+        {children}
       </div>
     </div>
   );

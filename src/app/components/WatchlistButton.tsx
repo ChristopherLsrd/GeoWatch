@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BookmarkIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { apiFetch } from "./apiFetch";
 import { removeFromWatchlist } from "./watchlistApi";
 import { WatchlistNote } from "./WatchlistNote";
@@ -15,6 +17,8 @@ export function WatchlistButton({ titleId }: { titleId: string }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Éditeur de note déplié : ouvert d'emblée quand une note existe déjà.
+  const [noteOpen, setNoteOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,6 +31,7 @@ export function WatchlistButton({ titleId }: { titleId: string }) {
         const body = (await response.json()) as { item: { note: string } | null };
         if (!controller.signal.aborted) {
           setState({ kind: "ready", inList: body.item !== null, note: body.item?.note ?? "" });
+          setNoteOpen(Boolean(body.item?.note));
         }
       } catch {
         if (!controller.signal.aborted) setState({ kind: "error" });
@@ -67,28 +72,47 @@ export function WatchlistButton({ titleId }: { titleId: string }) {
     setBusy(true);
     setMessage(null);
     const result = await removeFromWatchlist(titleId, note);
-    if (result.removed) setState({ kind: "ready", inList: false, note: "" });
+    if (result.removed) {
+      setState({ kind: "ready", inList: false, note: "" });
+      setNoteOpen(false);
+    }
     else if (result.error) setMessage(result.error);
     setBusy(false);
   }
 
   return (
     <div className="watchlist-box">
-      {state.inList ? (
-        <button type="button" onClick={() => void remove(state.note)} disabled={busy}>
-          Retirer de ma liste
-        </button>
-      ) : (
-        <button type="button" className="primary" onClick={() => void add()} disabled={busy}>
-          Ajouter à ma liste
-        </button>
-      )}
+      <div className="title-actions">
+        {state.inList ? (
+          // Bouton à bascule : « Dans ma liste » (appui = retrait de la liste).
+          <button type="button" aria-pressed="true" onClick={() => void remove(state.note)} disabled={busy}>
+            <BookmarkSolidIcon aria-hidden="true" />
+            Dans ma liste
+          </button>
+        ) : (
+          <button type="button" className="primary" onClick={() => void add()} disabled={busy}>
+            <BookmarkIcon aria-hidden="true" />
+            Ajouter à ma liste
+          </button>
+        )}
+        {state.inList && (
+          <button
+            type="button"
+            className="ghost note-button"
+            aria-expanded={noteOpen}
+            onClick={() => setNoteOpen(!noteOpen)}
+          >
+            <PencilIcon aria-hidden="true" />
+            {state.note ? "Ma note" : "Ajouter une note"}
+          </button>
+        )}
+      </div>
       {message && (
         <p role="alert" className="error">
           {message}
         </p>
       )}
-      {state.inList && (
+      {state.inList && noteOpen && (
         <WatchlistNote
           titleId={titleId}
           note={state.note}
