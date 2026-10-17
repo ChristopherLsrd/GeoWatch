@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "./apiFetch";
+import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 
@@ -60,6 +61,7 @@ export function WatchlistCards() {
               {browser.visible.map((item) => {
                 const { title } = item;
                 const director = directorsLabel(item.details);
+                const yearLabel = yearWithRuntime(title.year, item.details?.runtime);
                 return (
                   <li key={title.id}>
                     <Link
@@ -80,9 +82,7 @@ export function WatchlistCards() {
                         <HomeBadge item={item} />
                       </span>
                       <span className="card-title">{title.name}</span>
-                      {title.year !== null && (
-                        <span className="card-meta">{title.year}</span>
-                      )}
+                      {yearLabel && <span className="card-meta">{yearLabel}</span>}
                       {director && (
                         <span className="card-meta" title={director}>
                           {director}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "./apiFetch";
+import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 import { removeFromWatchlist } from "./watchlistApi";
 import { WatchlistNote } from "./WatchlistNote";
@@ -137,7 +138,7 @@ export function WatchlistView() {
                     {item.title.name}
                   </Link>
                   <div className="muted">
-                    {item.title.year ?? "année inconnue"} · {item.title.type === "MOVIE" ? "Film" : "Série"} · ajouté le{" "}
+                    {yearWithRuntime(item.title.year, item.details?.runtime) || "année inconnue"} · {item.title.type === "MOVIE" ? "Film" : "Série"} · ajouté le{" "}
                     {formatDate(item.addedAt)}
                   </div>
                   {directorsLabel(item.details) && (

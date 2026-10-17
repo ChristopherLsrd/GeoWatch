@@ -10,6 +10,7 @@ import type { Offer } from "@/domain/Offer";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
+import { formatRuntime } from "./format";
 import { OfferResults } from "./OfferResults";
 import { WatchlistButton } from "./WatchlistButton";
 
@@ -38,14 +39,6 @@ function formatCheckedAt(iso: string): string {
 }
 
 const nf = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
-// 148 -> « 2 h 28 » ; 120 -> « 2 h » ; 45 -> « 45 min ».
-function formatRuntime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} min`;
-  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
-}
 
 // 2900000 -> « 2,9 M votes » ; 12400 -> « 12 k votes ».
 function formatVotes(votes: number): string {
