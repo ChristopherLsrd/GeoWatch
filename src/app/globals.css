@@ -369,7 +369,11 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
   white-space: nowrap;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
-.poster-wrap .poster-badge { top: 2px; left: 2px; max-width: calc(100% - 4px); padding: 1px 3px; font-size: 0.55rem; text-align: center; overflow: hidden; }
+/* Affiche de « Ma liste » : plus grande que la miniature de la recherche, ratio 2:3. */
+.watch-item .poster { width: 96px; height: auto; aspect-ratio: 2 / 3; border-radius: 8px; display: block; }
+@media (max-width: 480px) {
+  .watch-item .poster { width: 72px; }
+}
 .card:hover .card-poster, .card:focus-visible .card-poster { border-color: var(--accent); }
 .card:hover .card-title { color: var(--accent); }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
