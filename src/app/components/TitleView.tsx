@@ -12,7 +12,7 @@ import type { Offer } from "@/domain/Offer";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
-import { formatRuntime } from "./format";
+import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
 import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
@@ -40,8 +40,6 @@ function formatCheckedAt(iso: string): string {
   const shortDay = date.toLocaleDateString("fr-FR", { timeZone: PARIS, day: "2-digit", month: "2-digit" });
   return `le ${shortDay} à ${time}`;
 }
-
-const nf = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 // 2900000 -> « 2,9 M votes » ; 12400 -> « 12 k votes ».
 function formatVotes(votes: number): string {
@@ -320,7 +318,7 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscript
               const content = (
                 <>
                   <strong>{pill.label}</strong>
-                  {pill.score != null && <span className="rating-score">{nf.format(pill.score)}</span>}
+                  {pill.score != null && <span className="rating-score">{formatScore(pill.score)}</span>}
                   {pill.votes != null && <span className="rating-votes">{formatVotes(pill.votes)}</span>}
                 </>
               );

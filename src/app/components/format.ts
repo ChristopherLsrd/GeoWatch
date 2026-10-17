@@ -1,3 +1,10 @@
+const scoreFormat = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// 8.84 -> « 8,8 ».
+export function formatScore(score: number): string {
+  return scoreFormat.format(score);
+}
+
 // 148 -> « 2h28 » ; 120 -> « 2h » ; 45 -> « 45min ».
 export function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
