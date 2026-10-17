@@ -10,9 +10,18 @@ export function AppHeader() {
   if (pathname === "/login") return null;
   return (
     <header className="app-header">
-      <Link href="/" className="brand">
-        GeoWatch
-      </Link>
+      <nav className="nav">
+        <Link href="/" className="brand">
+          GeoWatch
+        </Link>
+        <Link
+          href="/liste"
+          className={pathname === "/liste" ? "nav-link active" : "nav-link"}
+          aria-current={pathname === "/liste" ? "page" : undefined}
+        >
+          Ma liste
+        </Link>
+      </nav>
       <LogoutButton />
     </header>
   );

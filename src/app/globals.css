@@ -69,6 +69,11 @@ input[type="text"], input[type="search"], input[type="password"], select {
 }
 .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--text); }
 
+.nav { display: flex; align-items: center; gap: 20px; }
+.nav-link { color: var(--muted); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+.nav-link:hover { color: var(--text); }
+.nav-link.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+
 .container { max-width: 960px; margin: 0 auto; padding: 16px; }
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
@@ -164,6 +169,39 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
 .detail { padding: 4px 8px 12px 8px; display: grid; gap: 8px; }
 .detail-offer { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
 .badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: var(--badge); font-size: 0.8rem; margin-right: 4px; }
+
+/* Liste à voir */
+.watchlist-box { margin-top: 12px; max-width: 480px; }
+.watchlist-box > p { margin: 8px 0 0; }
+.title-head > div { min-width: 0; flex: 1; }
+.note { margin-top: 10px; }
+.note-label { display: grid; gap: 4px; font-weight: 600; }
+.note textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  resize: vertical;
+}
+.note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; }
+.note-count { font-size: 0.85rem; }
+.watch-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.watch-body { flex: 1; min-width: 0; }
+.watch-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.watch-head .result-title { color: var(--text); text-decoration: none; }
+.watch-head .result-title:hover { color: var(--accent); }
 
 /* Connexion */
 .login { max-width: 340px; margin: 15vh auto; padding: 0 16px; }

@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getTitle } from "@/infrastructure/container";
-import { catalogErrorResponse } from "../../catalogErrors";
+import { apiErrorResponse } from "../../apiErrors";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (!title) return NextResponse.json({ error: "not_found" }, { status: 404 });
     return NextResponse.json({ title });
   } catch (error) {
-    return catalogErrorResponse(error);
+    return apiErrorResponse(error);
   }
 }
