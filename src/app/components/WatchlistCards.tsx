@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BookmarkIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
-import { formatScore, yearWithRuntime } from "./format";
+import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
+import { PosterScores } from "./PosterScores";
 import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 
 type CardItem = OverviewItem;
@@ -66,10 +67,6 @@ export function WatchlistCards() {
                 const { title } = item;
                 const director = directorsLabel(item.details);
                 const yearLabel = yearWithRuntime(title.year, item.details?.runtime);
-                const scores = [
-                  { label: "IMDb", score: item.details?.imdbScore },
-                  { label: "TMDB", score: item.details?.tmdbScore },
-                ].filter((s): s is { label: string; score: number } => s.score != null);
                 return (
                   <li key={title.id}>
                     <Link
@@ -88,21 +85,7 @@ export function WatchlistCards() {
                           <span className="card-poster" />
                         )}
                         <HomeBadge item={item} />
-                        {scores.length > 0 && (
-                          <span className="poster-scores">
-                            {scores.map(({ label, score }) => (
-                              <span
-                                key={label}
-                                className="poster-score"
-                                role="img"
-                                aria-label={`Note ${label} : ${formatScore(score)} sur 10`}
-                              >
-                                <span aria-hidden="true">{label}</span>
-                                <strong aria-hidden="true">{formatScore(score)}</strong>
-                              </span>
-                            ))}
-                          </span>
-                        )}
+                        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
                       </span>
                       <span className="card-title">{title.name}</span>
                       {yearLabel && <span className="card-meta">{yearLabel}</span>}

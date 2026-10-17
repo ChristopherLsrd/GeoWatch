@@ -6,6 +6,7 @@ import { PencilIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
+import { PosterScores } from "./PosterScores";
 import { removeFromWatchlist } from "./watchlistApi";
 import { WatchlistNote } from "./WatchlistNote";
 import { useShowNotes, useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
@@ -43,6 +44,7 @@ function WatchItem({
           <div className="poster" />
         )}
         <HomeBadge item={item} />
+        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
       </div>
       <div className="watch-body">
         <div className="watch-head">
