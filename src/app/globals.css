@@ -79,7 +79,33 @@ input[type="text"], input[type="search"], input[type="password"], select {
 }
 input[type="text"]:focus, input[type="search"]:focus, input[type="password"]:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
 input::placeholder { color: var(--faint); }
-input[type="checkbox"], input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+/* Case dessinée à la main : le rendu d'accent-color varie selon les navigateurs. */
+input[type="checkbox"] {
+  appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--field);
+  cursor: pointer;
+}
+input[type="checkbox"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: var(--accent-text);
+  clip-path: polygon(14% 52%, 0 66%, 38% 100%, 100% 22%, 86% 8%, 38% 72%);
+  transform: scale(0);
+}
+input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:checked::before { transform: scale(1); }
+input[type="checkbox"]:hover:not(:disabled) { border-color: var(--accent); }
+input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .flag { font-size: 19px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
 
