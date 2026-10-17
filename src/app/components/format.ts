@@ -1,12 +1,12 @@
-// 148 -> « 2 h 28 » ; 120 -> « 2 h » ; 45 -> « 45 min ».
+// 148 -> « 2h28 » ; 120 -> « 2h » ; 45 -> « 45min ».
 export function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h === 0) return `${m} min`;
-  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+  if (h === 0) return `${m}min`;
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
-// « 2010 (2 h 28) », « 2010 », « (2 h 28) » ou chaîne vide.
+// « 2010 (2h28) », « 2010 », « (2h28) » ou chaîne vide.
 export function yearWithRuntime(year: number | null | undefined, runtime: number | null | undefined): string {
   const parts: string[] = [];
   if (year != null) parts.push(String(year));
