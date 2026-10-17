@@ -44,7 +44,6 @@ function WatchItem({
           <div className="poster" />
         )}
         <HomeBadge item={item} />
-        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
       </div>
       <div className="watch-body">
         <div className="watch-head">
@@ -57,6 +56,7 @@ function WatchItem({
               {formatDate(item.addedAt)}
             </p>
             {directors && <p className="watch-meta">De {directors}</p>}
+            <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} inline />
           </div>
           <div className="watch-actions">
             {!noteVisible && (
