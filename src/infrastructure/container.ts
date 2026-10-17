@@ -12,6 +12,7 @@ import { Watchlist } from "@/application/watchlist/Watchlist";
 import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
 import { getDb } from "./mongo/client";
+import { TmdbOriginalLanguage } from "./tmdb/TmdbOriginalLanguage";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
 import { MongoAvailabilityCache } from "./mongo/MongoAvailabilityCache";
 import { MongoPreferencesRepository } from "./mongo/MongoPreferencesRepository";
@@ -27,7 +28,7 @@ const subscriptionRepository = new MongoSubscriptionRepository(getDb);
 const alertRepository = new MongoAlertRepository(getDb);
 
 export const searchTitles = new SearchTitles(catalog);
-export const getTitle = new GetTitle(catalog);
+export const getTitle = new GetTitle(catalog, new TmdbOriginalLanguage({ apiKey: process.env.TMDB_API_KEY }));
 export const getTitleAvailability = new GetTitleAvailability(catalog, availabilityCache);
 export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const subscriptions = new Subscriptions(subscriptionRepository, catalog);

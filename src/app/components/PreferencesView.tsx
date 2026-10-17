@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PREFERENCE_LANGUAGES } from "@/config/languages";
 import { languageName } from "@/domain/Language";
+import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
 import { apiFetch } from "./apiFetch";
 
 type Saved = { audioLanguage: string; subtitleLanguage: string };
@@ -12,7 +13,7 @@ const byName = (a: string, b: string) => languageName(a).localeCompare(languageN
 
 // Liste de base triée par nom français ; la valeur enregistrée est ajoutée si elle n'y figure pas.
 function optionsFor(current: string): string[] {
-  const codes = current && !PREFERENCE_LANGUAGES.includes(current) ? [...PREFERENCE_LANGUAGES, current] : PREFERENCE_LANGUAGES;
+  const codes = current && current !== ORIGINAL_LANGUAGE && !PREFERENCE_LANGUAGES.includes(current) ? [...PREFERENCE_LANGUAGES, current] : PREFERENCE_LANGUAGES;
   return [...codes].sort(byName);
 }
 
@@ -102,12 +103,16 @@ export function PreferencesView() {
         <span className="filter-label">Langue audio par défaut</span>
         <select value={audio} onChange={(e) => setAudio(e.target.value)}>
           <option value="">Aucune</option>
+          <option value={ORIGINAL_LANGUAGE}>Version originale</option>
           {optionsFor(saved.audioLanguage || audio).map((code) => (
             <option key={code} value={code}>
               {languageName(code)}
             </option>
           ))}
         </select>
+        {audio === ORIGINAL_LANGUAGE && (
+          <span className="muted">La langue originale de chaque titre (films étrangers en VO).</span>
+        )}
       </label>
       <label>
         <span className="filter-label">Sous-titres par défaut</span>

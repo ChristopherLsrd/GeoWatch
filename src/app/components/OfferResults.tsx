@@ -49,6 +49,7 @@ export function OfferResults({
   subscribedPlatformIds = [],
   defaultAudioLanguage,
   defaultSubtitleLanguage,
+  defaultAudioLabel = "préférences",
 }: {
   offers: Offer[];
   complete: boolean;
@@ -56,6 +57,8 @@ export function OfferResults({
   // undefined : préférences pas encore connues ; null : aucune préférence.
   defaultAudioLanguage?: string | null;
   defaultSubtitleLanguage?: string | null;
+  // Mention affichée près du filtre audio quand il vient de la valeur par défaut (ex. « VO »).
+  defaultAudioLabel?: string;
 }) {
   const [types, setTypes] = useState<MonetizationType[]>([]);
   const [platformIds, setPlatformIds] = useState<string[]>([]);
@@ -154,7 +157,7 @@ export function OfferResults({
           <div className="selects">
             <label>
               <span className="filter-label">
-                Langue audio{audioFromPrefs && <span className="pref-note"> (préférences)</span>}
+                Langue audio{audioFromPrefs && <span className="pref-note"> ({defaultAudioLabel})</span>}
               </span>
               <select
                 value={audio}

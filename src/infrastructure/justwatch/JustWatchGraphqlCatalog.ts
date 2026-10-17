@@ -258,6 +258,8 @@ function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"])
   return {
     ...title,
     originalTitle: details?.originalTitle || null,
+    // JustWatch ne la fournit pas : complétée par GetTitle.
+    originalLanguage: null,
     synopsis: details?.shortDescription?.trim() || null,
     runtime: details?.runtime || null,
     releaseDate: details?.originalReleaseDate ?? null,
