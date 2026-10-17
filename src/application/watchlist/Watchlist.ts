@@ -40,12 +40,14 @@ export class Watchlist {
   }
 
   // Le titre est relu dans le catalogue pour enregistrer des identifiants fiables et le résumé de sa fiche.
-  async add(titleId: string): Promise<WatchlistItem> {
+  // addedAt : date d'ajout d'origine (import Letterboxd) ; par défaut, maintenant.
+  async add(titleId: string, options: { addedAt?: Date } = {}): Promise<WatchlistItem> {
     const existing = await this.repository.get(titleId);
     if (existing) return existing;
     const details = await this.catalog.getTitleDetails(titleId);
     if (!details) throw new TitleNotFoundError(titleId);
-    const item: WatchlistItem = { ...toWatchlistEntry(details, this.clock()), note: "", addedAt: this.clock() };
+    const now = this.clock();
+    const item: WatchlistItem = { ...toWatchlistEntry(details, now), note: "", addedAt: options.addedAt ?? now };
     await this.repository.add(item);
     return item;
   }
