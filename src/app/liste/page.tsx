@@ -4,7 +4,7 @@ export const metadata = { title: "Ma liste · GeoWatch" };
 
 export default function WatchlistPage() {
   return (
-    <main className="container">
+    <main className="container page">
       <h1>Ma liste</h1>
       <WatchlistView />
     </main>
