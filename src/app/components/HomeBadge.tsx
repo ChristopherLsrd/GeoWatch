@@ -1,10 +1,10 @@
 import type { WatchlistOverviewItem } from "@/application/watchlist/WatchlistOverview";
 import { countryName } from "@/domain/Country";
 
-// Élément de la liste à voir tel que reçu en JSON (dates en chaînes, seuls les champs affichés sont typés).
-export type OverviewItem = Omit<WatchlistOverviewItem, "addedAt" | "details"> & {
+// Élément de la liste à voir tel que reçu en JSON : la date d'ajout est une chaîne ISO
+// (`details.fetchedAt`, une chaîne aussi en réalité, n'est pas utilisé côté client).
+export type OverviewItem = Omit<WatchlistOverviewItem, "addedAt"> & {
   addedAt: string;
-  details: { directors: string[] } | null;
 };
 
 // Réalisateurs : 2 au maximum, puis « … ». Chaîne vide si inconnus.
