@@ -1,0 +1,205 @@
+// Adaptateur CatalogProvider pour l'API GraphQL non officielle de JustWatch.
+// Requêtes reprises de simple-justwatch-python-api (graphql.py, query.py).
+
+import { isCountryCode, type CountryCode } from "@/domain/Country";
+import { isMonetizationType } from "@/domain/MonetizationType";
+import type { Offer } from "@/domain/Offer";
+import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
+import type { Title } from "@/domain/Title";
+
+const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
+const IMAGES_URL = "https://images.justwatch.com";
+const TIMEOUT_MS = 20_000;
+
+const TITLE_FIELDS = `
+  id
+  objectType
+  content(country: $country, language: $language) {
+    title
+    originalReleaseYear
+    posterUrl(profile: S332, format: JPG)
+    externalIds { imdbId tmdbId }
+  }
+`;
+
+const SEARCH_QUERY = `
+query GetSearchTitles($searchTitlesFilter: TitleFilter!, $country: Country!, $language: Language!, $first: Int!) {
+  popularTitles(country: $country, filter: $searchTitlesFilter, first: $first, sortBy: POPULAR, sortRandomSeed: 0) {
+    edges { node { ${TITLE_FIELDS} } }
+  }
+}`;
+
+const TITLE_QUERY = `
+query GetTitleNode($nodeId: ID!, $country: Country!, $language: Language!) {
+  node(id: $nodeId) {
+    ... on MovieOrShow { ${TITLE_FIELDS} }
+  }
+}`;
+
+const OFFER_FRAGMENT = `
+fragment TitleOffer on Offer {
+  monetizationType
+  presentationType
+  retailPrice(language: $language)
+  retailPriceValue
+  currency
+  package { packageId clearName icon(profile: S100, format: PNG) }
+  standardWebURL
+  audioLanguages
+  subtitleLanguages
+}`;
+
+type JustWatchTitle = {
+  id: string;
+  objectType: string;
+  content: {
+    title: string;
+    originalReleaseYear: number | null;
+    posterUrl: string | null;
+    externalIds: { imdbId: string | null; tmdbId: string | null } | null;
+  };
+};
+
+type JustWatchOffer = {
+  monetizationType: string;
+  presentationType: string;
+  retailPrice: string | null;
+  retailPriceValue: number | null;
+  currency: string | null;
+  package: { packageId: number; clearName: string; icon: string | null };
+  standardWebURL: string | null;
+  audioLanguages: string[] | null;
+  subtitleLanguages: string[] | null;
+};
+
+export type JustWatchOptions = {
+  // Pays et langue utilisés pour la recherche et les noms des titres.
+  country?: CountryCode;
+  language?: string;
+  searchResultCount?: number;
+  fetch?: typeof fetch;
+};
+
+export class JustWatchGraphqlCatalog implements CatalogProvider {
+  private readonly country: CountryCode;
+  private readonly language: string;
+  private readonly searchResultCount: number;
+  private readonly fetch: typeof fetch;
+
+  constructor(options: JustWatchOptions = {}) {
+    this.country = options.country ?? "FR";
+    this.language = options.language ?? "fr";
+    this.searchResultCount = options.searchResultCount ?? 10;
+    this.fetch = options.fetch ?? fetch;
+  }
+
+  async searchTitles(query: string): Promise<Title[]> {
+    const data = await this.post<{ popularTitles: { edges: { node: JustWatchTitle }[] } }>({
+      operationName: "GetSearchTitles",
+      variables: {
+        first: this.searchResultCount,
+        searchTitlesFilter: { searchQuery: query, includeTitlesWithoutUrl: true, objectTypes: ["MOVIE", "SHOW"] },
+        country: this.country,
+        language: this.language,
+      },
+      query: SEARCH_QUERY,
+    });
+    return data.popularTitles.edges.map((edge) => toTitle(edge.node)).filter((title) => title !== null);
+  }
+
+  async getTitle(titleId: string): Promise<Title | null> {
+    const data = await this.post<{ node: JustWatchTitle | null }>({
+      operationName: "GetTitleNode",
+      variables: { nodeId: titleId, country: this.country, language: this.language },
+      query: TITLE_QUERY,
+    });
+    return data.node?.content ? toTitle(data.node) : null;
+  }
+
+  // Une seule requête pour plusieurs pays, grâce à un alias GraphQL par pays.
+  async getOffers(titleId: string, countries: CountryCode[]): Promise<Record<CountryCode, Offer[]>> {
+    const codes = countries.filter(isCountryCode);
+    const entries = codes
+      .map((code) => `${code}: offers(country: ${code}, platform: WEB, filter: $filter) { ...TitleOffer }`)
+      .join("\n");
+    const query = `
+query GetTitleOffers($nodeId: ID!, $language: Language!, $filter: OfferFilter!) {
+  node(id: $nodeId) {
+    ... on MovieOrShowOrSeasonOrEpisode { ${entries} }
+  }
+}
+${OFFER_FRAGMENT}`;
+    const data = await this.post<{ node: Record<string, JustWatchOffer[] | null> | null }>({
+      operationName: "GetTitleOffers",
+      variables: { nodeId: titleId, language: this.language, filter: { bestOnly: false } },
+      query,
+    });
+    return Object.fromEntries(
+      codes.map((code) => [code, (data.node?.[code] ?? []).map((offer) => toOffer(code, offer)).filter((o) => o !== null)]),
+    );
+  }
+
+  private async post<T>(body: object): Promise<T> {
+    let response: Response;
+    try {
+      response = await this.fetch(GRAPHQL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-store",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (error) {
+      throw new CatalogUnavailableError("JustWatch injoignable", error);
+    }
+    // 429 : limitation ; 403 : blocage ; 5xx : panne. Dans tous les cas, on s'arrête proprement.
+    if (response.status === 429 || response.status === 403 || response.status >= 500) {
+      throw new CatalogUnavailableError(`JustWatch a répondu ${response.status}`);
+    }
+    const json = await response.json().catch(() => null);
+    if (!response.ok || !json || json.errors) {
+      throw new Error(`Réponse JustWatch inattendue (${response.status}) : ${JSON.stringify(json?.errors ?? json).slice(0, 300)}`);
+    }
+    return json.data as T;
+  }
+}
+
+function imageUrl(path: string | null): string | null {
+  if (!path) return null;
+  return path.startsWith("http") ? path : `${IMAGES_URL}${path}`;
+}
+
+function toTitle(node: JustWatchTitle): Title | null {
+  if (node.objectType !== "MOVIE" && node.objectType !== "SHOW") return null;
+  return {
+    id: node.id,
+    type: node.objectType,
+    name: node.content.title,
+    year: node.content.originalReleaseYear ?? null,
+    posterUrl: imageUrl(node.content.posterUrl),
+    imdbId: node.content.externalIds?.imdbId ?? null,
+    tmdbId: node.content.externalIds?.tmdbId ?? null,
+  };
+}
+
+function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
+  if (!isMonetizationType(offer.monetizationType)) return null;
+  return {
+    country,
+    platform: {
+      id: String(offer.package.packageId),
+      name: offer.package.clearName,
+      iconUrl: imageUrl(offer.package.icon),
+    },
+    monetizationType: offer.monetizationType,
+    // JustWatch préfixe les valeurs qui commencent par un chiffre (« _4K »).
+    quality: offer.presentationType.replace(/^_/, ""),
+    price: offer.retailPrice ?? null,
+    priceValue: offer.retailPriceValue ?? null,
+    currency: offer.currency ?? null,
+    audioLanguages: offer.audioLanguages ?? [],
+    subtitleLanguages: offer.subtitleLanguages ?? [],
+    // Certaines URL arrivent échappées pour du HTML.
+    url: offer.standardWebURL?.replace(/&amp;/g, "&") ?? null,
+  };
+}
