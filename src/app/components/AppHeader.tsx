@@ -9,11 +9,11 @@ import {
   BookmarkIcon,
   ChevronRightIcon,
   CreditCardIcon,
-  GlobeAltIcon,
   HomeIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { LogoutButton } from "./LogoutButton";
+import { Logo } from "./Logo";
 
 const LINKS = [
   { href: "/", label: "Accueil", Icon: HomeIcon },
@@ -57,9 +57,7 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <Link href="/" className="brand" aria-label="GeoWatch, accueil">
-        <span className="brand-mark">
-          <GlobeAltIcon className="nav-icon" aria-hidden="true" />
-        </span>
+        <Logo className="brand-mark" size={34} />
         <span>GeoWatch</span>
       </Link>
       <nav className="nav" aria-label="Navigation principale">

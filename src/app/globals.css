@@ -145,7 +145,7 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
   letter-spacing: -0.01em;
 }
 .brand:hover { color: var(--text); }
-.brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--accent-text); }
+.brand-mark { flex: none; width: 32px; height: 32px; }
 .nav-icon { width: 20px; height: 20px; flex: none; }
 
 .nav { display: none; align-items: center; gap: 4px; flex: 1; min-width: 0; margin-left: 20px; }
@@ -253,7 +253,7 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (min-width: 768px) {
   .app-header { height: 64px; padding: 0 24px; }
   .brand { font-size: 20px; }
-  .brand-mark { width: 34px; height: 34px; border-radius: 10px; }
+  .brand-mark { width: 34px; height: 34px; }
   .nav { display: flex; }
   .header-logout { display: inline-flex; }
   .burger, .mobile-scrim, .mobile-menu { display: none; }
@@ -754,8 +754,7 @@ button.ghost.ghost-danger:hover:not(:disabled) { color: var(--danger); }
 }
 .login-box { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 28px; }
 .login-brand { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
-.login-mark { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--accent); color: var(--accent-text); }
-.login-mark svg { width: 30px; height: 30px; }
+.login-mark { display: block; width: 56px; height: 56px; }
 .login-brand h1 { margin: 0; font-size: 36px; line-height: 1; }
 .login-brand p { margin: 0; color: var(--muted); }
 .login-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35); }

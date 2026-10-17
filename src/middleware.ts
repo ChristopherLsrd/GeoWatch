@@ -33,6 +33,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les fichiers statiques de Next.js et le favicon.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Tout sauf les fichiers statiques de Next.js et le favicon (icon.svg).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
 };

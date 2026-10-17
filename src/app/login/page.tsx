@@ -6,10 +6,10 @@ import {
   ExclamationCircleIcon,
   EyeIcon,
   EyeSlashIcon,
-  GlobeAltIcon,
   LockClosedIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
+import { Logo } from "../components/Logo";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -47,9 +47,7 @@ export default function LoginPage() {
     <main className="login">
       <div className="login-box">
         <div className="login-brand">
-          <span className="login-mark" aria-hidden="true">
-            <GlobeAltIcon />
-          </span>
+          <Logo className="login-mark" size={56} />
           <h1>GeoWatch</h1>
           <p>Où regarder, partout dans le monde.</p>
         </div>
