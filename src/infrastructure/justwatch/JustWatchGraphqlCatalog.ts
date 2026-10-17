@@ -19,6 +19,7 @@ const TITLE_FIELDS = `
   objectType
   content(country: $country, language: $language) {
     title
+    originalTitle
     originalReleaseYear
     posterUrl(profile: S332, format: JPG)
     externalIds { imdbId tmdbId }
@@ -86,6 +87,7 @@ type JustWatchTitle = {
   objectType: string;
   content: {
     title: string;
+    originalTitle?: string | null;
     originalReleaseYear: number | null;
     posterUrl: string | null;
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
@@ -246,6 +248,7 @@ function toTitle(node: JustWatchTitle): Title | null {
     id: node.id,
     type: node.objectType,
     name: node.content.title,
+    originalTitle: node.content.originalTitle || null,
     year: node.content.originalReleaseYear ?? null,
     posterUrl: imageUrl(node.content.posterUrl),
     imdbId: node.content.externalIds?.imdbId ?? null,
