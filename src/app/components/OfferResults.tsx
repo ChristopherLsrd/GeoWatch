@@ -26,7 +26,15 @@ function offerLabel(offer: Offer): string {
   return offer.price ? `${offer.quality} ${offer.price}` : offer.quality;
 }
 
-export function OfferResults({ offers, complete }: { offers: Offer[]; complete: boolean }) {
+export function OfferResults({
+  offers,
+  complete,
+  subscribedPlatformIds = [],
+}: {
+  offers: Offer[];
+  complete: boolean;
+  subscribedPlatformIds?: string[];
+}) {
   const [types, setTypes] = useState<MonetizationType[]>([]);
   const [platformIds, setPlatformIds] = useState<string[]>([]);
   const [audio, setAudio] = useState("");
@@ -49,8 +57,8 @@ export function OfferResults({ offers, complete }: { offers: Offer[]; complete: 
       audioLanguage: audio || undefined,
       subtitleLanguage: subtitles || undefined,
     };
-    return groupOffers(filterOffers(offers, filters));
-  }, [offers, types, platformIds, audio, subtitles]);
+    return groupOffers(filterOffers(offers, filters), { subscribedPlatformIds });
+  }, [offers, types, platformIds, audio, subtitles, subscribedPlatformIds]);
 
   function toggle<T>(list: T[], value: T): T[] {
     return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -135,7 +143,10 @@ export function OfferResults({ offers, complete }: { offers: Offer[]; complete: 
               <div className="platform-icon" />
             )}
             <div>
-              <div className="platform-name">{group.platform.name}</div>
+              <div className="platform-name">
+                {group.platform.name}
+                {group.subscribed && <span className="badge badge-sub">Abonné</span>}
+              </div>
               <div className="muted">
                 disponible dans {group.countryCount} pays
               </div>

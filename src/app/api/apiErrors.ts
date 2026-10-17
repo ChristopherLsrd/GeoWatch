@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { InvalidCountriesError } from "@/application/catalog/GetTitleAvailability";
+import { InvalidCountryError, PlatformNotFoundError } from "@/application/subscriptions/Subscriptions";
 import { InvalidNoteError, NotInWatchlistError, TitleNotFoundError } from "@/application/watchlist/Watchlist";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
 
@@ -9,13 +10,13 @@ export function apiErrorResponse(error: unknown): NextResponse {
   if (error instanceof CatalogUnavailableError) {
     return NextResponse.json({ error: "catalog_unavailable", message: error.message }, { status: 503 });
   }
-  if (error instanceof InvalidCountriesError) {
+  if (error instanceof InvalidCountriesError || error instanceof InvalidCountryError) {
     return NextResponse.json({ error: "invalid_countries", message: error.message }, { status: 400 });
   }
   if (error instanceof InvalidNoteError) {
     return NextResponse.json({ error: "invalid_note", message: error.message }, { status: 400 });
   }
-  if (error instanceof TitleNotFoundError || error instanceof NotInWatchlistError) {
+  if (error instanceof TitleNotFoundError || error instanceof NotInWatchlistError || error instanceof PlatformNotFoundError) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   console.error(error);
