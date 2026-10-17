@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getTitleAvailability } from "@/infrastructure/container";
-import { catalogErrorResponse } from "../../../catalogErrors";
+import { apiErrorResponse } from "../../../apiErrors";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       checkedAt: Object.fromEntries(entries.map((a) => [a.country, a.fetchedAt.toISOString()])),
     });
   } catch (error) {
-    return catalogErrorResponse(error);
+    return apiErrorResponse(error);
   }
 }

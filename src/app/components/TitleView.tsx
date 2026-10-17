@@ -6,6 +6,7 @@ import type { Offer } from "@/domain/Offer";
 import type { Title } from "@/domain/Title";
 import { apiFetch } from "./apiFetch";
 import { OfferResults } from "./OfferResults";
+import { WatchlistButton } from "./WatchlistButton";
 
 const BATCHES = countryBatches();
 const TOTAL_COUNTRIES = BATCHES.reduce((sum, batch) => sum + batch.length, 0);
@@ -205,6 +206,7 @@ function TitleHeader({ title }: { title: Title }) {
             ))}
           </div>
         )}
+        <WatchlistButton titleId={title.id} />
       </div>
     </header>
   );
