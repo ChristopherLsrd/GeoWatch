@@ -58,7 +58,7 @@ export function AppHeader() {
     <header className="app-header">
       <Link href="/" className="brand" aria-label="GeoWatch, accueil">
         <Logo className="brand-mark" size={34} />
-        <span>GeoWatch</span>
+        <span className="wordmark">Geo<span>Watch</span></span>
       </Link>
       <nav className="nav" aria-label="Navigation principale">
         {LINKS.map(({ href, label, Icon }) => (

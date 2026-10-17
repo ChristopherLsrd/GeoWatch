@@ -48,7 +48,7 @@ export default function LoginPage() {
       <div className="login-box">
         <div className="login-brand">
           <Logo className="login-mark" size={56} />
-          <h1>GeoWatch</h1>
+          <h1 className="wordmark">Geo<span>Watch</span></h1>
           <p>Où regarder, partout dans le monde.</p>
         </div>
         <form className="login-card" onSubmit={onSubmit}>

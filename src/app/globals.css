@@ -146,6 +146,9 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .brand:hover { color: var(--text); }
 .brand-mark { flex: none; width: 32px; height: 32px; }
+/* Nom du site : « Geo » en texte clair, « Watch » en ambre (maquette Logo-Globe). */
+.wordmark { letter-spacing: -0.025em; }
+.wordmark span { color: var(--accent); }
 .nav-icon { width: 20px; height: 20px; flex: none; }
 
 .nav { display: none; align-items: center; gap: 4px; flex: 1; min-width: 0; margin-left: 20px; }
