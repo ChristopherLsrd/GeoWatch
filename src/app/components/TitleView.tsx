@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { availableAtHome } from "@/application/catalog/availableAtHome";
 import { countryBatches } from "@/application/catalog/countryBatches";
 import { countryFlag, countryName } from "@/domain/Country";
+import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
+import { languageName } from "@/domain/Language";
 import type { Offer } from "@/domain/Offer";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
@@ -180,6 +182,15 @@ export function TitleView({ id }: { id: string }) {
     return () => current.abort();
   }, []);
 
+  // « Version originale » : résolue avec la langue d'origine du titre. Rien n'est transmis à OfferResults
+  // (undefined) tant que les préférences, et le titre si nécessaire, ne sont pas connus.
+  const wantsOriginal = prefs?.audio === ORIGINAL_LANGUAGE;
+  const titleSettled = titleState.kind !== "loading";
+  const originalLanguage = titleState.kind === "ready" ? titleState.title.originalLanguage : null;
+  const prefsReady = prefs !== undefined && (!wantsOriginal || titleSettled);
+  const defaultAudio = !prefsReady ? undefined : wantsOriginal ? originalLanguage : prefs.audio;
+  const defaultSubtitles = prefsReady ? prefs.subtitles : undefined;
+
   // Calculé sur toutes les offres reçues, pas sur les offres filtrées.
   const atHome = useMemo(() => availableAtHome(offers, subscriptions), [offers, subscriptions]);
   const subscribedPlatformIds = useMemo(
@@ -246,12 +257,16 @@ export function TitleView({ id }: { id: string }) {
             </div>
           </div>
 
+          {prefsReady && wantsOriginal && !originalLanguage && (
+            <p className="muted">Langue originale inconnue : pas de filtre VO.</p>
+          )}
           <OfferResults
             offers={offers}
             complete={status === "done"}
             subscribedPlatformIds={subscribedPlatformIds}
-            defaultAudioLanguage={prefs?.audio}
-            defaultSubtitleLanguage={prefs?.subtitles}
+            defaultAudioLanguage={defaultAudio}
+            defaultSubtitleLanguage={defaultSubtitles}
+            defaultAudioLabel={wantsOriginal ? "VO" : undefined}
           />
         </>
       )}
@@ -271,6 +286,7 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscript
     title.type === "MOVIE" ? "Film" : "Série",
     ...(title.runtime ? [formatRuntime(title.runtime)] : []),
     ...(title.genres.length > 0 ? [title.genres.join(", ")] : []),
+    ...(title.originalLanguage ? [`VO : ${languageName(title.originalLanguage)}`] : []),
   ];
   const synopsis = title.synopsis?.trim() ?? "";
   const longSynopsis = synopsis.length > SYNOPSIS_LIMIT;

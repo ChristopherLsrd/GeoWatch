@@ -28,6 +28,8 @@ describe("UserPreferences avec Mongo", () => {
     const preferences = setup("p2");
     await preferences.update({ audioLanguage: "fr", subtitleLanguage: "pt-BR" });
     expect(await preferences.get()).toEqual({ audioLanguage: "fr", subtitleLanguage: "pt-BR" });
+    await preferences.update({ audioLanguage: "original", subtitleLanguage: null });
+    expect(await preferences.get()).toEqual({ audioLanguage: "original", subtitleLanguage: null });
     await preferences.update({ audioLanguage: "", subtitleLanguage: null });
     expect(await preferences.get()).toEqual({ audioLanguage: null, subtitleLanguage: null });
   });

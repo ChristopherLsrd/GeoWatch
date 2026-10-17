@@ -1,7 +1,7 @@
 // Préférences de langue audio et sous-titres, appliquées par défaut aux filtres.
 
 import type { PreferencesRepository } from "@/domain/ports/PreferencesRepository";
-import { DEFAULT_PREFERENCES, isLanguageCode, type Preferences } from "@/domain/Preferences";
+import { DEFAULT_PREFERENCES, isLanguageCode, ORIGINAL_LANGUAGE, type Preferences } from "@/domain/Preferences";
 
 export class InvalidPreferencesError extends Error {
   constructor() {
@@ -17,7 +17,10 @@ export class UserPreferences {
   }
 
   async update(input: { audioLanguage: unknown; subtitleLanguage: unknown }): Promise<Preferences> {
-    const preferences = { audioLanguage: parse(input.audioLanguage), subtitleLanguage: parse(input.subtitleLanguage) };
+    const preferences = {
+      audioLanguage: input.audioLanguage === ORIGINAL_LANGUAGE ? ORIGINAL_LANGUAGE : parse(input.audioLanguage),
+      subtitleLanguage: parse(input.subtitleLanguage),
+    };
     await this.repository.save(preferences);
     return preferences;
   }
