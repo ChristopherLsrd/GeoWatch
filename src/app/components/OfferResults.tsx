@@ -30,16 +30,33 @@ export function OfferResults({
   offers,
   complete,
   subscribedPlatformIds = [],
+  defaultAudioLanguage,
+  defaultSubtitleLanguage,
 }: {
   offers: Offer[];
   complete: boolean;
   subscribedPlatformIds?: string[];
+  // undefined : préférences pas encore connues ; null : aucune préférence.
+  defaultAudioLanguage?: string | null;
+  defaultSubtitleLanguage?: string | null;
 }) {
   const [types, setTypes] = useState<MonetizationType[]>([]);
   const [platformIds, setPlatformIds] = useState<string[]>([]);
   const [audio, setAudio] = useState("");
   const [subtitles, setSubtitles] = useState("");
+  const [prefsApplied, setPrefsApplied] = useState(false);
+  const [audioTouched, setAudioTouched] = useState(false);
+  const [subtitlesTouched, setSubtitlesTouched] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // Les préférences s'appliquent une seule fois, sans écraser un choix déjà fait à la main.
+  if (!prefsApplied && (defaultAudioLanguage !== undefined || defaultSubtitleLanguage !== undefined)) {
+    setPrefsApplied(true);
+    if (!audioTouched && defaultAudioLanguage) setAudio(defaultAudioLanguage);
+    if (!subtitlesTouched && defaultSubtitleLanguage) setSubtitles(defaultSubtitleLanguage);
+  }
+  const audioFromPrefs = audio !== "" && audio === defaultAudioLanguage;
+  const subtitlesFromPrefs = subtitles !== "" && subtitles === defaultSubtitleLanguage;
 
   // Options de filtre alimentées par les offres déjà reçues (avant filtrage).
   const platforms = useMemo(() => {
@@ -47,8 +64,15 @@ export function OfferResults({
     for (const offer of offers) byId.set(offer.platform.id, offer.platform);
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
   }, [offers]);
-  const audioOptions = useMemo(() => sortedLanguages(offers.flatMap((o) => o.audioLanguages)), [offers]);
-  const subtitleOptions = useMemo(() => sortedLanguages(offers.flatMap((o) => o.subtitleLanguages)), [offers]);
+  // La valeur sélectionnée figure toujours dans les options, même sans offre correspondante.
+  const audioOptions = useMemo(
+    () => sortedLanguages([...offers.flatMap((o) => o.audioLanguages), ...(audio ? [audio] : [])]),
+    [offers, audio],
+  );
+  const subtitleOptions = useMemo(
+    () => sortedLanguages([...offers.flatMap((o) => o.subtitleLanguages), ...(subtitles ? [subtitles] : [])]),
+    [offers, subtitles],
+  );
 
   const groups = useMemo(() => {
     const filters: OfferFilters = {
@@ -102,8 +126,16 @@ export function OfferResults({
           </fieldset>
           <div className="selects">
             <label>
-              <span className="filter-label">Langue audio</span>
-              <select value={audio} onChange={(e) => setAudio(e.target.value)}>
+              <span className="filter-label">
+                Langue audio{audioFromPrefs && <span className="pref-note"> (préférences)</span>}
+              </span>
+              <select
+                value={audio}
+                onChange={(e) => {
+                  setAudioTouched(true);
+                  setAudio(e.target.value);
+                }}
+              >
                 <option value="">Toutes</option>
                 {audioOptions.map((code) => (
                   <option key={code} value={code}>
@@ -113,8 +145,16 @@ export function OfferResults({
               </select>
             </label>
             <label>
-              <span className="filter-label">Sous-titres</span>
-              <select value={subtitles} onChange={(e) => setSubtitles(e.target.value)}>
+              <span className="filter-label">
+                Sous-titres{subtitlesFromPrefs && <span className="pref-note"> (préférences)</span>}
+              </span>
+              <select
+                value={subtitles}
+                onChange={(e) => {
+                  setSubtitlesTouched(true);
+                  setSubtitles(e.target.value);
+                }}
+              >
                 <option value="">Toutes</option>
                 {subtitleOptions.map((code) => (
                   <option key={code} value={code}>
@@ -131,7 +171,22 @@ export function OfferResults({
         <p className="muted">Ce titre n&apos;est disponible nulle part sur les pays vérifiés.</p>
       )}
       {offers.length > 0 && groups.length === 0 && hasFilters && (
-        <p className="muted">Aucune offre ne correspond aux filtres.</p>
+        <p className="muted filter-empty">
+          <span>Aucune offre ne correspond aux filtres.</span>
+          {(audioFromPrefs || subtitlesFromPrefs) && (
+            <button
+              type="button"
+              onClick={() => {
+                setAudioTouched(true);
+                setSubtitlesTouched(true);
+                setAudio("");
+                setSubtitles("");
+              }}
+            >
+              Retirer les filtres de langue
+            </button>
+          )}
+        </p>
       )}
 
       {groups.map((group) => (

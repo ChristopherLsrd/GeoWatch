@@ -69,10 +69,16 @@ input[type="text"], input[type="search"], input[type="password"], select {
 }
 .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--text); }
 
-.nav { display: flex; align-items: center; gap: 20px; }
+.nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 20px; min-width: 0; }
 .nav-link { color: var(--muted); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
 .nav-link:hover { color: var(--text); }
 .nav-link.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+
+@media (max-width: 480px) {
+  .app-header { flex-wrap: wrap; padding: 8px 12px; }
+  .nav { gap: 4px 14px; }
+  .brand { font-size: 1.1rem; }
+}
 
 .container { max-width: 960px; margin: 0 auto; padding: 16px; }
 .muted { color: var(--muted); }
@@ -308,3 +314,10 @@ fieldset.filter-group { border: 0; margin: 0; padding: 0; }
 }
 .history-item:hover { border-color: var(--accent); }
 .link-button { background: none; border: 0; padding: 4px 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
+
+/* Préférences */
+.pref-form { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+.pref-form label { display: flex; flex-direction: column; gap: 4px; }
+.pref-form select { width: 100%; }
+.pref-note { font-size: 0.85em; color: var(--muted); font-weight: 400; }
+.filter-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

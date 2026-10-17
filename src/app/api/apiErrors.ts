@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { InvalidCountriesError } from "@/application/catalog/GetTitleAvailability";
+import { InvalidPreferencesError } from "@/application/preferences/UserPreferences";
 import { InvalidCountryError, PlatformNotFoundError } from "@/application/subscriptions/Subscriptions";
 import { InvalidNoteError, NotInWatchlistError, TitleNotFoundError } from "@/application/watchlist/Watchlist";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
@@ -12,6 +13,9 @@ export function apiErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof InvalidCountriesError || error instanceof InvalidCountryError) {
     return NextResponse.json({ error: "invalid_countries", message: error.message }, { status: 400 });
+  }
+  if (error instanceof InvalidPreferencesError) {
+    return NextResponse.json({ error: "invalid_preferences", message: error.message }, { status: 400 });
   }
   if (error instanceof InvalidNoteError) {
     return NextResponse.json({ error: "invalid_note", message: error.message }, { status: 400 });
