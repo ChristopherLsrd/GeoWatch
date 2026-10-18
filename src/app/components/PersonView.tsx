@@ -107,6 +107,12 @@ export function PersonView({ id, initialRole }: { id: string; initialRole?: stri
   );
 }
 
+const PHOTO_CREDIT_LABELS = {
+  wikipedia: "Wikimedia Commons",
+  tmdb: "TMDB",
+  justwatch: "JustWatch",
+} as const;
+
 function PersonHeader({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
   const [bioShown, setBioShown] = useState(false);
@@ -116,13 +122,22 @@ function PersonHeader({ person }: { person: Person }) {
   const text = long && !open ? `${biography.slice(0, BIOGRAPHY_LIMIT).trimEnd()}…` : biography;
   return (
     <header className="person-head">
-      {person.photoUrl ? (
-        <img className="person-photo" src={person.photoUrl} alt="" />
-      ) : (
-        <div className="person-photo person-photo-empty">
-          <UserIcon aria-hidden="true" />
-        </div>
-      )}
+      <figure className="person-figure">
+        {person.photoUrl ? (
+          <img className="person-photo" src={person.photoUrl} alt="" />
+        ) : (
+          <div className="person-photo person-photo-empty">
+            <UserIcon aria-hidden="true" />
+          </div>
+        )}
+        {person.photoUrl && person.photoCredit && (
+          <figcaption className="person-photo-credit">
+            <a href={person.photoCredit.url} target="_blank" rel="noopener noreferrer">
+              Photo : {PHOTO_CREDIT_LABELS[person.photoCredit.source]}
+            </a>
+          </figcaption>
+        )}
+      </figure>
       <div className="person-info">
         <h1>{person.name}</h1>
         {life && <p className="title-meta">{life}</p>}

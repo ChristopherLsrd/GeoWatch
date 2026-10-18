@@ -2,6 +2,7 @@ import "./globals.css";
 import { Bricolage_Grotesque, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { AppHeader } from "./components/AppHeader";
+import { AppFooter } from "./components/AppFooter";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin", "latin-ext"],
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AppHeader />
         {children}
+        <AppFooter />
       </body>
     </html>
   );
