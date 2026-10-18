@@ -7,7 +7,11 @@ import type { OverviewItem } from "./HomeBadge";
 export const WATCHLIST_STORAGE_KEY = "geowatch:watchlist:v1";
 
 // Plafonds par affichage, repris de l'ancienne lecture : 10 vérifications et 20 compléments de fiche.
+// Ce sont des maximums stricts : un appel n'est lancé que si son pire cas (CHECK_BATCH) les respecte.
 export const CHECK_CAPS = { checked: 10, completed: 20 } as const;
+
+// Titres traités au plus par appel (vérifications, et compléments), comme côté serveur.
+export const CHECK_BATCH = 3;
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -38,14 +42,23 @@ export function clearLocalWatchlist(storage: StorageLike | null): void {
   }
 }
 
-// Remplace les éléments mis à jour par la vérification ; un élément absent de la liste courante est ignoré.
+// La vérification n'apporte que `details` et `availableAtHome` : le reste de l'élément local (note,
+// date d'ajout…) est conservé, pour ne pas écraser une note enregistrée pendant l'appel.
+// Un élément absent de la liste courante est ignoré.
 export function mergeItems(current: OverviewItem[], updates: OverviewItem[]): OverviewItem[] {
   const byId = new Map(updates.map((u) => [u.title.id, u]));
-  return current.map((item) => byId.get(item.title.id) ?? item);
+  return current.map((item) => {
+    const u = byId.get(item.title.id);
+    return u ? { ...item, details: u.details, availableAtHome: u.availableAtHome } : item;
+  });
 }
 
 export function nextCheckAllowed(totals: { checked: number; completed: number }, pending: number): boolean {
-  return pending > 0 && totals.checked < CHECK_CAPS.checked && totals.completed < CHECK_CAPS.completed;
+  return (
+    pending > 0 &&
+    totals.checked + CHECK_BATCH <= CHECK_CAPS.checked &&
+    totals.completed + CHECK_BATCH <= CHECK_CAPS.completed
+  );
 }
 
 // localStorage, ou null s'il est inaccessible (navigation privée stricte, rendu serveur).

@@ -88,6 +88,14 @@ describe("mergeItems", () => {
     ]);
   });
 
+  it("garde la note locale : la vérification n'apporte que details et availableAtHome", () => {
+    const local = { ...item("tm1", null), note: "nouvelle" };
+    const update = { ...item("tm1", []), note: "" };
+    const [merged] = mergeItems([local], [update]);
+    expect(merged.note).toBe("nouvelle");
+    expect(merged.availableAtHome).toEqual([]);
+  });
+
   it("ignore un élément retiré entre-temps", () => {
     expect(mergeItems([item("tm1")], [item("tm9", [])]).map((i) => i.title.id)).toEqual(["tm1"]);
   });
@@ -96,12 +104,12 @@ describe("mergeItems", () => {
 describe("nextCheckAllowed", () => {
   it("continue tant qu'il reste du travail et que les plafonds ne sont pas atteints", () => {
     expect(nextCheckAllowed({ checked: 0, completed: 0 }, 5)).toBe(true);
-    expect(nextCheckAllowed({ checked: 9, completed: 19 }, 5)).toBe(true);
+    expect(nextCheckAllowed({ checked: 7, completed: 17 }, 5)).toBe(true);
   });
 
-  it("s'arrête quand rien ne reste ou qu'un plafond est atteint", () => {
+  it("s'arrête quand rien ne reste ou que le pire cas dépasserait un plafond", () => {
     expect(nextCheckAllowed({ checked: 0, completed: 0 }, 0)).toBe(false);
-    expect(nextCheckAllowed({ checked: CHECK_CAPS.checked, completed: 0 }, 5)).toBe(false);
-    expect(nextCheckAllowed({ checked: 0, completed: CHECK_CAPS.completed }, 5)).toBe(false);
+    expect(nextCheckAllowed({ checked: 8, completed: 0 }, 5)).toBe(false);
+    expect(nextCheckAllowed({ checked: 0, completed: 18 }, 5)).toBe(false);
   });
 });
