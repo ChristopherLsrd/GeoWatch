@@ -8,6 +8,7 @@ import { DailyCheck } from "@/application/daily/DailyCheck";
 import { GetPerson } from "@/application/people/GetPerson";
 import { ImportLetterboxd } from "@/application/import/ImportLetterboxd";
 import { SearchHistory } from "@/application/history/SearchHistory";
+import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
 import { Watchlist } from "@/application/watchlist/Watchlist";
@@ -15,6 +16,7 @@ import { WatchlistCheck } from "@/application/watchlist/WatchlistCheck";
 import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
 import { ImdbParentsGuide } from "./imdb/ImdbParentsGuide";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
+import { JustWatchRatingCatalog } from "./justwatch/JustWatchRatingCatalog";
 import { JustWatchPersonCatalog } from "./justwatch/JustWatchPersonCatalog";
 import { getDb } from "./mongo/client";
 import { TmdbTitleExtras } from "./tmdb/TmdbTitleExtras";
@@ -50,6 +52,8 @@ export const getTitle = new GetTitle(
   new TmdbTitleExtras({ apiKey: process.env.TMDB_API_KEY }),
   contentAdvisories,
 );
+export const ratingCatalog = new JustWatchRatingCatalog();
+export const listRatedTitles = new ListRatedTitles(ratingCatalog, contentAdvisories, subscriptionRepository);
 export const getTitleAvailability = new GetTitleAvailability(catalog, availabilityCache);
 export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const importLetterboxd = new ImportLetterboxd(catalog, watchlist);
