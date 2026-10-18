@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { JUSTWATCH_COUNTRIES } from "@/config/countries";
 import { AlertsPanel } from "./components/AlertsPanel";
 import { SearchBox } from "./components/SearchBox";
@@ -9,7 +10,9 @@ export default function Home() {
       <div className="home-hero">
         <p className="eyebrow">Disponibilités · {JUSTWATCH_COUNTRIES.length} pays</p>
         <h1>Où regarder ce soir ?</h1>
-        <SearchBox />
+        <Suspense>
+          <SearchBox />
+        </Suspense>
       </div>
       <AlertsPanel />
       <WatchlistCards />
