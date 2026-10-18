@@ -61,7 +61,7 @@ describe("GetPerson", () => {
 
   it("sert la fiche du jour depuis le cache, sans appeler le catalogue", async () => {
     const cached: CachedPerson = {
-      person: { id: "tp1725", name: "Nolan (cache)", birthDate: null, deathDate: null, photoUrl: null, biography: null, biographySource: null, sourceUrl: null },
+      person: { id: "tp1725", name: "Nolan (cache)", birthDate: null, deathDate: null, photoUrl: null, photoCredit: null, biography: null, biographySource: null, sourceUrl: null },
       filmography: { DIRECTOR: [entry("tm1", { FR: ["8"] })], ACTOR: [], OTHER: [] },
       flatrateCountries: ["FR"],
       fetchedAt: now,
@@ -75,7 +75,7 @@ describe("GetPerson", () => {
 
   it("réinterroge le catalogue quand un pays d'abonnement manque au cache", async () => {
     const cached: CachedPerson = {
-      person: { id: "tp1725", name: "Nolan", birthDate: null, deathDate: null, photoUrl: null, biography: null, biographySource: null, sourceUrl: null },
+      person: { id: "tp1725", name: "Nolan", birthDate: null, deathDate: null, photoUrl: null, photoCredit: null, biography: null, biographySource: null, sourceUrl: null },
       filmography: { DIRECTOR: [], ACTOR: [], OTHER: [] },
       flatrateCountries: ["FR"],
       fetchedAt: now,

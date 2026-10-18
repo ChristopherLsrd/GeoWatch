@@ -41,9 +41,11 @@ export class WikipediaPersonSource implements PersonInfoSource {
       if (!response.ok) return null;
       const summary = (await response.json()) as WikipediaSummary;
       if (!isCinemaSummary(summary)) return null;
+      const photoUrl = summary.thumbnail?.source ?? null;
       return {
         biography: summary.extract?.trim() || null,
-        photoUrl: summary.thumbnail?.source ?? null,
+        photoUrl,
+        photoPageUrl: photoUrl ? commonsFilePage(photoUrl) : null,
         deathDate: null,
         sourceUrl: summary.content_urls?.desktop?.page ?? `https://fr.wikipedia.org/wiki/${page}`,
       };
@@ -51,4 +53,14 @@ export class WikipediaPersonSource implements PersonInfoSource {
       return null;
     }
   }
+}
+
+// Page d'une image de Wikimedia, où figurent son auteur et sa licence (attribution CC BY-SA par lien) :
+// « …/wikipedia/commons/thumb/9/95/Nom.jpg/320px-Nom.jpg » → « commons.wikimedia.org/wiki/File:Nom.jpg ».
+// Une image propre à un Wikipédia (« …/wikipedia/fr/… ») a sa page « Fichier: » sur ce Wikipédia.
+export function commonsFilePage(imageUrl: string): string | null {
+  const match = imageUrl.match(/^https:\/\/upload\.wikimedia\.org\/wikipedia\/([a-z-]+)\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/]+)/);
+  if (!match) return null;
+  const [, wiki, file] = match;
+  return wiki === "commons" ? `https://commons.wikimedia.org/wiki/File:${file}` : `https://${wiki}.wikipedia.org/wiki/Fichier:${file}`;
 }
