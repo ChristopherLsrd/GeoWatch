@@ -45,6 +45,7 @@ const inceptionDetails: TitleDetails = {
   ...inception,
   originalTitle: "Inception",
   originalLanguage: "en",
+  trailer: null,
   synopsis: "Dom Cobb est un voleur.",
   runtime: 148,
   releaseDate: "2010-07-14",
