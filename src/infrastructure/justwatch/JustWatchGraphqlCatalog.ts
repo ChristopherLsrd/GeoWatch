@@ -7,6 +7,7 @@ import type { Offer, Platform } from "@/domain/Offer";
 import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { Title } from "@/domain/Title";
 import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
+import { measure } from "../timing/requestTiming";
 
 const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
 const IMAGES_URL = "https://images.justwatch.com";
@@ -214,7 +215,12 @@ ${OFFER_FRAGMENT}`;
     return platforms;
   }
 
-  private async post<T>(body: object): Promise<T> {
+  // Chaque appel compte dans le temps « justwatch » de l'en-tête Server-Timing.
+  private post<T>(body: object): Promise<T> {
+    return measure("justwatch", () => this.send<T>(body));
+  }
+
+  private async send<T>(body: object): Promise<T> {
     let response: Response;
     try {
       response = await this.fetch(GRAPHQL_URL, {
