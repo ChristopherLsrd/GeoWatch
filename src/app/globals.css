@@ -1027,6 +1027,7 @@ button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-sele
 .rating-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 22px; }
 .rating-filters input[type="search"] { flex: 1 1 220px; min-width: 0; }
 .rating-filters select { max-width: 100%; }
+.rating-filters-toggle { display: none; }
 .rating-years { display: flex; gap: 6px; }
 .rating-years input { width: 92px; height: 48px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--field); }
 .rating-years input:focus { border-color: var(--accent); outline: none; }
@@ -1034,6 +1035,8 @@ button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-sele
 .rating-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .rating-more { display: flex; justify-content: center; margin-top: 24px; }
 @media (max-width: 600px) {
+  button.ghost.rating-filters-toggle { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; margin-bottom: 10px; border: 0; color: var(--accent); font-weight: 600; }
+  .rating-filters:not(.is-open) { display: none; } /* champs gardés montés : la saisie survit au repli */
   .rating-filters > * { flex: 1 1 100%; }
   .rating-years input { flex: 1 1 0; width: auto; min-width: 0; }
 }

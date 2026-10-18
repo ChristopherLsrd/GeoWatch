@@ -45,6 +45,21 @@ function hasActiveFilters(filters: RatingFilters): boolean {
   );
 }
 
+// Nombre de filtres différents de leur valeur par défaut (le tri ne compte pas), pour le bouton mobile.
+function countActiveFilters(filters: RatingFilters): number {
+  const d = DEFAULT_RATING_FILTERS;
+  const checks = [
+    filters.type !== d.type,
+    filters.search !== d.search,
+    filters.genre !== d.genre,
+    filters.yearFrom !== d.yearFrom,
+    filters.yearTo !== d.yearTo,
+    filters.imdbMin !== d.imdbMin,
+    filters.homeOnly !== d.homeOnly,
+  ];
+  return checks.filter(Boolean).length + Object.keys(filters.advisory).length;
+}
+
 export function RatingView({ country, code, initialSearch }: { country: string; code: string; initialSearch: string }) {
   const known = isRatingListKnown(country, code);
   const router = useRouter();
@@ -61,6 +76,7 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
   const [yearFromInput, setYearFromInput] = useState(filters.yearFrom?.toString() ?? "");
   const [yearToInput, setYearToInput] = useState(filters.yearTo?.toString() ?? "");
+  const [filtersOpen, setFiltersOpen] = useState(false); // barre repliée sur mobile (sans effet sur ordinateur)
   const [genres, setGenres] = useState<Genre[] | null>(null);
   const moreController = useRef<AbortController | null>(null);
 
@@ -200,6 +216,7 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
   }
 
   const active = hasActiveFilters(filters);
+  const activeCount = countActiveFilters(filters);
   const advisoryActive = Object.keys(filters.advisory).length > 0;
   const clearButton = (
     <button type="button" className="ghost" onClick={clearFilters}>
@@ -235,7 +252,17 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
         )}
       </header>
 
-      <div className="rating-filters">
+      {/* Mobile : la barre est masquée en CSS tant que « is-open » manque ; les champs restent montés. */}
+      <button
+        type="button"
+        className="ghost rating-filters-toggle"
+        aria-expanded={filtersOpen}
+        aria-controls="rating-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        {activeCount > 0 ? `Filtres et tri (${activeCount})` : "Filtres et tri"}
+      </button>
+      <div id="rating-filters" className={filtersOpen ? "rating-filters is-open" : "rating-filters"}>
         <input
           type="search"
           placeholder="Rechercher un titre"
