@@ -10,7 +10,7 @@ describe("requestTiming", () => {
       return "ok";
     });
     expect(result).toBe("ok");
-    expect(timings).toEqual({ mongo: 5.5, justwatch: 10 });
+    expect(timings).toEqual({ mongo: 5.5, justwatch: 10, imdb: 0 });
     expect(totalMs).toBeGreaterThanOrEqual(0);
   });
 
@@ -48,8 +48,8 @@ describe("requestTiming", () => {
   });
 
   it("formate l'en-tête avec une décimale", () => {
-    expect(serverTimingHeader({ mongo: 12.345, justwatch: 0 }, 250.06)).toBe(
-      "mongo;dur=12.3, justwatch;dur=0.0, total;dur=250.1",
+    expect(serverTimingHeader({ mongo: 12.345, justwatch: 0, imdb: 0 }, 250.06)).toBe(
+      "mongo;dur=12.3, justwatch;dur=0.0, imdb;dur=0.0, total;dur=250.1",
     );
   });
 });
