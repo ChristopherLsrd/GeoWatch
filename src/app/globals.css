@@ -906,8 +906,8 @@ a.rating:hover { border-color: var(--accent); color: var(--text); }
 .age-rating { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: 15px; font-weight: 700; text-decoration: none; }
 a.age-rating:hover, a.age-rating:focus-visible { border-color: var(--accent); color: var(--text); }
 .advisory-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.advisory-list li { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
-.advisory-list li a { color: inherit; text-decoration: none; }
+.advisory-list li { padding: 0; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
+.advisory-list li a, .advisory-list li > span { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 10px; color: inherit; text-decoration: none; }
 .advisory-list li:hover { border-color: var(--accent); }
 .advisory-list li[data-severity="moderate"] { background: var(--accent-soft); border-color: var(--border-strong); }
 .advisory-list li[data-severity="severe"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
@@ -1017,7 +1017,7 @@ button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-sele
 .rating-head h1, .rating-head p { margin: 0; }
 .rating-note { font-size: 13px; }
 .rating-codes { display: flex; gap: 6px; max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
-.rating-codes a { flex: none; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rating-codes a { flex: none; display: inline-flex; align-items: center; min-height: 24px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; text-decoration: none; }
 .rating-codes a:hover { border-color: var(--accent); color: var(--text); }
 .rating-codes a.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
 .rating-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 22px; }

@@ -21,6 +21,8 @@ export function AgeRatingSection({
   if (!ageRating && !advisory) return null;
 
   const clickable = !!ageRating && isKnownAgeRating(ageRating.country, ageRating.code);
+  // Les codes américains sont propres aux films ou aux séries : le type n'est transmis que pour la France.
+  const typeFilter = ageRating?.country === "FR" ? { type } : {};
   const reasons = advisory ? ADVISORY_CATEGORIES.filter((c) => advisory[c]) : [];
 
   let pill = null;
@@ -31,7 +33,7 @@ export function AgeRatingSection({
     pill = clickable ? (
       <Link
         className="age-rating"
-        href={ratingHref(country, code, { type })}
+        href={ratingHref(country, code, typeFilter)}
         title={title}
         aria-label={`Titres classés ${code} (${countryName(country)})`}
       >
@@ -56,11 +58,11 @@ export function AgeRatingSection({
               return (
                 <li key={c} data-severity={severity}>
                   {clickable ? (
-                    <Link href={ratingHref(ageRating!.country, ageRating!.code, { type, advisory: { [c]: severity } })}>
+                    <Link href={ratingHref(ageRating!.country, ageRating!.code, { ...typeFilter, advisory: { [c]: severity } })}>
                       {label}
                     </Link>
                   ) : (
-                    label
+                    <span>{label}</span>
                   )}
                 </li>
               );

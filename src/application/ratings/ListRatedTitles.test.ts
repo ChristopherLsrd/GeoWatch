@@ -119,6 +119,15 @@ describe("ListRatedTitles", () => {
     expect(result.titles.map((t) => t.availableAtHome)).toEqual([[]]);
   });
 
+  it("renvoie une page vide sans appeler le catalogue si « Chez moi » est demandé sans abonnement dans le pays", async () => {
+    const { catalog, lists, flatrateCalls } = fakeCatalog([[title(1)]]);
+    const { provider } = guides({});
+    const result = await new ListRatedTitles(catalog, provider, subscriptions([])).execute({ ...query, homeOnly: true }, {});
+    expect(result).toEqual({ titles: [], total: 0, nextCursor: null, homeAvailable: false });
+    expect(lists).toHaveLength(0);
+    expect(flatrateCalls).toHaveLength(0);
+  });
+
   it("ne transmet que les abonnements du pays de la liste", async () => {
     const { catalog, lists } = fakeCatalog([[title(1)]]);
     const { provider } = guides({});

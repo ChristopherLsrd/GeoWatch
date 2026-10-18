@@ -25,6 +25,8 @@ export class ListRatedTitles {
     const subscriptions = await this.subscriptions.list();
     const homePlatformIds = subscriptions.filter((s) => s.country === query.country).map((s) => s.platform.id);
     const homeAvailable = homePlatformIds.length > 0;
+    // « Chez moi seulement » sans abonnement dans ce pays : rien à chercher.
+    if (query.homeOnly && !homeAvailable) return { titles: [], total: 0, nextCursor: null, homeAvailable: false };
 
     let page = await this.catalog.list(query, homePlatformIds);
     if (Object.keys(advisory).length === 0) {

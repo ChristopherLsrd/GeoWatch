@@ -21,7 +21,7 @@ import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
 import { TitleCard } from "./TitleCard";
 
-type Status = "loading" | "ready" | "error" | "advisory_error" | "not_found";
+type Status = "loading" | "ready" | "error" | "failed" | "advisory_error" | "not_found";
 type Genre = { code: string; label: string };
 
 const SORT_LABELS: Record<RatingSort, string> = {
@@ -55,7 +55,8 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
   const [homeAvailable, setHomeAvailable] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [loadingMore, setLoadingMore] = useState(false);
-  const [moreFailed, setMoreFailed] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [moreEmpty, setMoreEmpty] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
   const [yearFromInput, setYearFromInput] = useState(filters.yearFrom?.toString() ?? "");
@@ -75,7 +76,8 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
     setTitles([]);
     setTotal(null);
     setNextCursor(null);
-    setMoreFailed(false);
+    setMoreError(null);
+    setMoreEmpty(false);
     setLoadingMore(false);
     setStatus("loading");
     (async () => {
@@ -88,7 +90,7 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
           if (controller.signal.aborted) return;
           return setStatus(body?.error === "advisory_unavailable" ? "advisory_error" : "error");
         }
-        if (!response.ok) throw new Error(String(response.status));
+        if (!response.ok) return setStatus("failed");
         const page = (await response.json()) as RatedTitlesPage;
         if (controller.signal.aborted) return;
         setTitles(page.titles);
@@ -143,18 +145,28 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
     const controller = new AbortController();
     moreController.current = controller;
     setLoadingMore(true);
-    setMoreFailed(false);
+    setMoreError(null);
+    setMoreEmpty(false);
     try {
       const response = await apiFetch(apiUrl(country, code, filters, nextCursor), controller.signal);
       if (controller.signal.aborted) return;
-      if (!response.ok) throw new Error(String(response.status));
+      if (!response.ok) {
+        const body =
+          response.status === 503 ? ((await response.json().catch(() => null)) as { error?: string } | null) : null;
+        if (controller.signal.aborted) return;
+        return setMoreError(
+          body?.error === "advisory_unavailable" ? "Guide parental indisponible." : "Impossible de charger la suite.",
+        );
+      }
       const page = (await response.json()) as RatedTitlesPage;
       if (controller.signal.aborted) return;
+      const added = page.titles.filter((t) => !titles.some((c) => c.id === t.id));
       setTitles((current) => [...current, ...page.titles.filter((t) => !current.some((c) => c.id === t.id))]);
       setNextCursor(page.nextCursor);
       setHomeAvailable(page.homeAvailable);
+      setMoreEmpty(added.length === 0 && page.nextCursor !== null);
     } catch {
-      if (!controller.signal.aborted) setMoreFailed(true);
+      if (!controller.signal.aborted) setMoreError("Impossible de charger la suite.");
     } finally {
       if (!controller.signal.aborted) setLoadingMore(false);
     }
@@ -201,7 +213,11 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
         <h1>
           Classification {code} · {countryFlag(country)} {countryName(country)}
         </h1>
-        {total !== null && <p className="muted">{total.toLocaleString("fr-FR")} titres</p>}
+        {total !== null && (
+          <p className="muted" aria-live="polite">
+            {total.toLocaleString("fr-FR")} {total > 1 ? "titres" : "titre"}
+          </p>
+        )}
         <nav className="rating-codes" aria-label="Classifications">
           {(AGE_RATINGS[country] ?? []).map((c) => (
             <Link
@@ -316,28 +332,37 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
         {active && clearButton}
       </div>
 
-      {status === "loading" && <p className="muted">Chargement…</p>}
-      {status === "not_found" && (
-        <p role="alert">
-          Classification inconnue. <Link href="/">Retour à l&apos;accueil</Link>
-        </p>
-      )}
-      {(status === "error" || status === "advisory_error") && (
-        <div className="person-error">
-          <p role="alert" className="error">
-            {status === "error" ? "JustWatch ne répond pas pour le moment." : "Guide parental indisponible."}
+      <div aria-live="polite">
+        {status === "loading" && <p className="muted">Chargement…</p>}
+        {status === "not_found" && (
+          <p role="alert">
+            Classification inconnue. <Link href="/">Retour à l&apos;accueil</Link>
           </p>
-          <button type="button" onClick={() => setAttempt((n) => n + 1)}>
-            Réessayer
-          </button>
-        </div>
-      )}
-      {status === "ready" && titles.length === 0 && (
-        <div className="rating-empty">
-          <p className="muted">Aucun titre ne correspond.</p>
-          {clearButton}
-        </div>
-      )}
+        )}
+        {(status === "error" || status === "failed" || status === "advisory_error") && (
+          <div className="person-error">
+            <p role="alert" className="error">
+              {status === "error"
+                ? "JustWatch ne répond pas pour le moment."
+                : status === "failed"
+                  ? "Le chargement a échoué."
+                  : "Guide parental indisponible."}
+            </p>
+            <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+              Réessayer
+            </button>
+          </div>
+        )}
+        {status === "ready" && titles.length === 0 && !nextCursor && (
+          <div className="rating-empty">
+            <p className="muted">Aucun titre ne correspond.</p>
+            {active && clearButton}
+          </div>
+        )}
+        {status === "ready" && nextCursor && (titles.length === 0 || moreEmpty) && (
+          <p className="muted">Aucun titre trouvé pour l&apos;instant dans les titres parcourus.</p>
+        )}
+      </div>
       {titles.length > 0 && (
         <ul className="card-grid">
           {titles.map((card) => (
@@ -355,15 +380,15 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
           ))}
         </ul>
       )}
-      {status === "ready" && moreFailed && (
+      {status === "ready" && moreError && (
         <p role="alert" className="error">
-          Impossible de charger la suite.
+          {moreError}
         </p>
       )}
       {status === "ready" && nextCursor && (
         <div className="rating-more">
           <button type="button" onClick={loadMore} disabled={loadingMore}>
-            {moreFailed ? "Réessayer" : loadingMore ? "Chargement…" : "Voir plus"}
+            {moreError ? "Réessayer" : loadingMore ? "Chargement…" : "Voir plus"}
           </button>
         </div>
       )}
