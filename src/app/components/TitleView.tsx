@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ArrowLeftIcon, ArrowPathIcon, CheckCircleIcon, HomeIcon } from "@heroicons/react/24/outline";
-import { availableAtHome } from "@/application/catalog/availableAtHome";
+import { ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, HomeIcon } from "@heroicons/react/24/outline";
+import { availableAtHome, homeOfferLink } from "@/application/catalog/availableAtHome";
 import { countryBatches } from "@/application/catalog/countryBatches";
 import { countryFlag, countryName } from "@/domain/Country";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
@@ -186,7 +186,14 @@ export function TitleView({ id }: { id: string }) {
   const defaultSubtitles = prefsReady ? prefs.subtitles : undefined;
 
   // Calculé sur toutes les offres reçues, pas sur les offres filtrées.
-  const atHome = useMemo(() => availableAtHome(offers, subscriptions), [offers, subscriptions]);
+  const atHome = useMemo(
+    () =>
+      availableAtHome(offers, subscriptions).map((subscription) => ({
+        subscription,
+        link: homeOfferLink(offers, subscription),
+      })),
+    [offers, subscriptions],
+  );
   const subscribedPlatformIds = useMemo(
     () => [...new Set(subscriptions.map((s) => s.platform.id))],
     [subscriptions],
@@ -268,7 +275,18 @@ export function TitleView({ id }: { id: string }) {
 const SYNOPSIS_LIMIT = 300;
 const CAST_VISIBLE = 5;
 
-function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscription[] }) {
+function AtHomeLabel({ subscription }: { subscription: Subscription }) {
+  return (
+    <>
+      {subscription.platform.name} · <span className="flag" aria-hidden="true">{countryFlag(subscription.country)}</span>{" "}
+      {countryName(subscription.country)}
+    </>
+  );
+}
+
+type AtHomeEntry = { subscription: Subscription; link: string | null };
+
+function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEntry[] }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
   const { infoRef, posterWidth } = useFitPosterWidth();
@@ -385,22 +403,52 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: Subscript
           </dl>
         )}
         <div className="home-block">
-          {atHome.length > 0 && (
-            <div className="at-home" role="status">
+          {atHome.length === 1 && atHome[0].link ? (
+            <a
+              className="at-home at-home-link"
+              href={atHome[0].link}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Regarder sur ${atHome[0].subscription.platform.name} (${countryName(atHome[0].subscription.country)})`}
+              aria-label={`Regarder sur ${atHome[0].subscription.platform.name} (${countryName(atHome[0].subscription.country)})`}
+            >
               <HomeIcon aria-hidden="true" />
               <div>
                 <strong>Disponible chez moi</strong>
                 <span>
-                  {atHome.map((s, index) => (
-                    <Fragment key={`${s.platform.id}-${s.country}`}>
-                      {index > 0 && " ; "}
-                      {s.platform.name} · <span className="flag" aria-hidden="true">{countryFlag(s.country)}</span>{" "}
-                      {countryName(s.country)}
-                    </Fragment>
-                  ))}
+                  <AtHomeLabel subscription={atHome[0].subscription} />
                 </span>
               </div>
-            </div>
+              <ArrowTopRightOnSquareIcon className="at-home-external" aria-hidden="true" />
+            </a>
+          ) : (
+            atHome.length > 0 && (
+              <div className="at-home" role="status">
+                <HomeIcon aria-hidden="true" />
+                <div>
+                  <strong>Disponible chez moi</strong>
+                  <span>
+                    {atHome.map(({ subscription, link }, index) => (
+                      <Fragment key={`${subscription.platform.id}-${subscription.country}`}>
+                        {index > 0 && " ; "}
+                        {link ? (
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Regarder sur ${subscription.platform.name} (${countryName(subscription.country)})`}
+                          >
+                            <AtHomeLabel subscription={subscription} />
+                          </a>
+                        ) : (
+                          <AtHomeLabel subscription={subscription} />
+                        )}
+                      </Fragment>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            )
           )}
           <WatchlistButton titleId={title.id} />
         </div>

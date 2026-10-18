@@ -568,9 +568,17 @@ button.ghost.ghost-danger:hover:not(:disabled) { color: var(--danger); }
 .at-home svg { width: 26px; height: 26px; flex: none; }
 .at-home div { display: flex; flex-direction: column; font-size: 14px; line-height: 1.35; }
 .at-home .flag { font-size: 16px; }
+.at-home a { color: inherit; text-decoration: none; }
+.at-home a:hover, .at-home a:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
+.at-home a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
+a.at-home-link { color: var(--accent-text); text-decoration: none; transition: filter 0.15s; }
+a.at-home-link:hover { filter: brightness(1.1); }
+a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.at-home svg.at-home-external { width: 16px; height: 16px; margin-left: auto; opacity: 0.85; }
 @media (max-width: 767px) {
   .at-home { gap: 12px; padding: 12px 14px; }
   .at-home svg { width: 24px; height: 24px; }
+  .at-home svg.at-home-external { width: 16px; height: 16px; }
 }
 .sub-cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
 .sub-mine { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
