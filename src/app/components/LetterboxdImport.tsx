@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { LetterboxdCsvError, parseLetterboxdCsv, type LetterboxdEntry } from "@/application/import/parseLetterboxdCsv";
 import type { ImportResult } from "@/application/import/ImportLetterboxd";
@@ -10,7 +10,7 @@ import { apiFetch } from "./apiFetch";
 // Même valeur que MAX_BATCH côté serveur (copiée pour ne pas embarquer de code serveur).
 const BATCH_SIZE = 5;
 
-type Stopped = "user" | "catalog" | "network" | null;
+type Stopped = "user" | "catalog" | "network" | "error" | null;
 type Ambiguous = Extract<ImportResult, { status: "ambiguous" }>;
 
 const keyOf = (entry: LetterboxdEntry) => entry.letterboxdUri ?? entry.name;
@@ -103,8 +103,15 @@ export function LetterboxdImport() {
   const [over, setOver] = useState(false);
   const stopRef = useRef(false);
 
+  // Quitter la page arrête la boucle : plus aucun lot n'est envoyé (les mises à jour d'état après démontage sont sans effet).
+  useEffect(() => {
+    return () => {
+      stopRef.current = true;
+    };
+  }, []);
+
   async function readFile(file: File | undefined) {
-    if (!file) return;
+    if (!file || started) return;
     setFileError(null);
     setEntries(null);
     try {
@@ -142,7 +149,7 @@ export function LetterboxdImport() {
         break;
       }
       if (!response.ok) {
-        reason = response.status === 503 ? "catalog" : "network";
+        reason = response.status === 503 ? "catalog" : "error";
         break;
       }
       try {
@@ -208,7 +215,7 @@ export function LetterboxdImport() {
           <input
             type="file"
             accept=".csv,text/csv"
-            disabled={running}
+            disabled={started}
             onChange={(e) => {
               void readFile(e.target.files?.[0]);
               e.target.value = "";
@@ -264,7 +271,12 @@ export function LetterboxdImport() {
               </button>
             </div>
           )}
-          {!running && stopped && queue.length > 0 && (
+          {!running && stopped === "error" && queue.length > 0 && (
+            <p role="alert" className="error">
+              L&apos;import a échoué. {plural(queue.length, "film non traité", "films non traités")}.
+            </p>
+          )}
+          {!running && stopped && stopped !== "error" && queue.length > 0 && (
             <div className="import-actions">
               <p>
                 {plural(queue.length, "film non traité", "films non traités")}
