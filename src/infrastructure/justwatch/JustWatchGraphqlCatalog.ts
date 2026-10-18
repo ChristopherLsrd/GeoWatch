@@ -10,9 +10,6 @@ import type { Title } from "@/domain/Title";
 import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
 import { JustWatchClient, imageUrl } from "./JustWatchClient";
 
-const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
-const IMAGES_URL = "https://images.justwatch.com";
-const TIMEOUT_MS = 20_000;
 // La liste des plateformes d'un pays change rarement.
 const PLATFORMS_TTL_MS = 24 * 3600 * 1000;
 
