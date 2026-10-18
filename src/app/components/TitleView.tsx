@@ -14,6 +14,7 @@ import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
 import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
+import { ROLE_PARAMS } from "./PersonView";
 import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
 
@@ -373,7 +374,23 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
             {title.directors.length > 0 && (
               <>
                 <dt>{title.type === "MOVIE" ? "Réalisation" : "Création"}</dt>
-                <dd>{title.directors.join(", ")}</dd>
+                <dd>
+                  {title.directors.map((name, index) => {
+                    const ref = title.directorRefs?.find((candidate) => candidate.name === name);
+                    return (
+                      <Fragment key={`${name}-${index}`}>
+                        {index > 0 && ", "}
+                        {ref ? (
+                          <Link href={`/personne/${ref.id}?role=${ROLE_PARAMS.DIRECTOR}`} className="person-link">
+                            {name}
+                          </Link>
+                        ) : (
+                          name
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </dd>
               </>
             )}
             {title.cast.length > 0 && (
@@ -383,7 +400,13 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
                   {cast.map((member, index) => (
                     <Fragment key={`${member.name}-${index}`}>
                       {index > 0 && ", "}
-                      {member.name}
+                      {member.personId ? (
+                        <Link href={`/personne/${member.personId}?role=${ROLE_PARAMS.ACTOR}`} className="person-link">
+                          {member.name}
+                        </Link>
+                      ) : (
+                        member.name
+                      )}
                       {member.character && <span className="muted"> · {member.character}</span>}
                     </Fragment>
                   ))}

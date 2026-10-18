@@ -320,8 +320,18 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
+  position: relative;
 }
-.result:hover { border-color: var(--accent); }
+.result:hover,
+.result:has(.result-link:hover),
+.result:has(.result-link:focus-visible) { border-color: var(--accent); }
+.result-link { color: inherit; text-decoration: none; }
+.result-link::after { content: ""; position: absolute; inset: 0; border-radius: 12px; }
+.result-link:focus-visible { outline: none; }
+.result:has(.result-link:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.result-director { position: relative; z-index: 1; }
+.person-link { color: inherit; text-decoration: none; }
+.person-link:hover, .person-link:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
 .poster { width: 46px; height: 68px; object-fit: cover; border-radius: 4px; background: var(--badge); flex: none; }
 .result-title { font-weight: 600; }
 
