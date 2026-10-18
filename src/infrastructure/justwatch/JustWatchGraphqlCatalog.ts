@@ -5,6 +5,7 @@ import { isCountryCode, type CountryCode } from "@/domain/Country";
 import { isMonetizationType } from "@/domain/MonetizationType";
 import type { Offer, Platform } from "@/domain/Offer";
 import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
+import type { PersonRef } from "@/domain/PersonRef";
 import type { Title } from "@/domain/Title";
 import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
 import { JustWatchClient, imageUrl } from "./JustWatchClient";
@@ -24,7 +25,7 @@ const TITLE_FIELDS = `
     originalReleaseYear
     posterUrl(profile: S332, format: JPG)
     externalIds { imdbId tmdbId }
-    directors: credits(role: DIRECTOR) { name }
+    directors: credits(role: DIRECTOR) { name personId }
   }
 `;
 
@@ -54,7 +55,7 @@ query GetTitleDetails($nodeId: ID!, $country: Country!, $language: Language!) {
         originalReleaseDate
         genres { translation(language: $language) }
         scoring { imdbScore imdbVotes tmdbScore }
-        credits { role name characterName }
+        credits { role name characterName personId }
       }
     }
   }
@@ -93,7 +94,7 @@ type JustWatchTitle = {
     originalReleaseYear: number | null;
     posterUrl: string | null;
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
-    directors?: { name: string }[] | null;
+    directors?: { name: string; personId?: number | null }[] | null;
   };
 };
 
@@ -105,7 +106,7 @@ type JustWatchTitleDetails = JustWatchTitle & {
     originalReleaseDate: string | null;
     genres: { translation: string | null }[] | null;
     scoring: { imdbScore: number | null; imdbVotes: number | null; tmdbScore: number | null } | null;
-    credits: { role: string; name: string; characterName: string | null }[] | null;
+    credits: { role: string; name: string; characterName: string | null; personId?: number | null }[] | null;
   } | null;
 };
 
@@ -228,7 +229,12 @@ function toTitle(node: JustWatchTitle): Title | null {
     imdbId: node.content.externalIds?.imdbId ?? null,
     tmdbId: node.content.externalIds?.tmdbId ?? null,
     directors: node.content.directors?.map((d) => d.name) ?? [],
+    directorRefs: personRefs(node.content.directors),
   };
+}
+
+function personRefs(credits: { name: string; personId?: number | null }[] | null | undefined): PersonRef[] {
+  return (credits ?? []).filter((c) => c.personId != null).map((c) => ({ id: `tp${c.personId}`, name: c.name }));
 }
 
 function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"]): TitleDetails {
@@ -249,7 +255,7 @@ function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"])
     cast: credits
       .filter((c) => c.role === "ACTOR")
       .slice(0, MAX_CAST)
-      .map((c) => ({ name: c.name, character: c.characterName || null })),
+      .map((c) => ({ name: c.name, character: c.characterName || null, personId: c.personId != null ? `tp${c.personId}` : null })),
   };
 }
 

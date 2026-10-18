@@ -67,8 +67,8 @@ describe("JustWatchGraphqlCatalog", () => {
             genres: [{ translation: "Action & Aventure" }, { translation: null }],
             scoring: { imdbScore: 8.8, imdbVotes: 2880387, tmdbScore: 8.373 },
             credits: [
-              { role: "ACTOR", name: "Leonardo DiCaprio", characterName: "Dom Cobb" },
-              { role: "DIRECTOR", name: "Christopher Nolan", characterName: "" },
+              { role: "ACTOR", name: "Leonardo DiCaprio", characterName: "Dom Cobb", personId: 1641 },
+              { role: "DIRECTOR", name: "Christopher Nolan", characterName: "", personId: 1725 },
               { role: "ACTOR", name: "Elliot Page", characterName: "" },
             ],
           },
@@ -95,11 +95,52 @@ describe("JustWatchGraphqlCatalog", () => {
       imdbVotes: 2880387,
       tmdbScore: 8.373,
       directors: ["Christopher Nolan"],
+      directorRefs: [],
       cast: [
-        { name: "Leonardo DiCaprio", character: "Dom Cobb" },
-        { name: "Elliot Page", character: null },
+        { name: "Leonardo DiCaprio", character: "Dom Cobb", personId: "tp1641" },
+        { name: "Elliot Page", character: null, personId: null },
       ],
     });
+  });
+
+  it("donne les identifiants des réalisateurs et des acteurs", async () => {
+    const { fn, calls } = fakeFetch(200, {
+      data: {
+        node: {
+          id: "tm92641",
+          objectType: "MOVIE",
+          content: {
+            title: "Inception",
+            originalReleaseYear: 2010,
+            posterUrl: null,
+            externalIds: null,
+            directors: [{ name: "Christopher Nolan", personId: 1725 }],
+          },
+          details: {
+            originalTitle: "Inception",
+            shortDescription: null,
+            runtime: 148,
+            originalReleaseDate: null,
+            genres: [],
+            scoring: null,
+            credits: [
+              { role: "DIRECTOR", name: "Christopher Nolan", characterName: null, personId: 1725 },
+              { role: "ACTOR", name: "Leonardo DiCaprio", characterName: "Cobb", personId: 1641 },
+              { role: "ACTOR", name: "Inconnu", characterName: null },
+            ],
+          },
+        },
+      },
+    });
+    const title = await new JustWatchGraphqlCatalog({ fetch: fn }).getTitleDetails("tm92641");
+    expect(calls[0].query).toContain("credits(role: DIRECTOR) { name personId }");
+    expect(calls[0].query).toContain("credits { role name characterName personId }");
+    expect(title?.directors).toEqual(["Christopher Nolan"]);
+    expect(title?.directorRefs).toEqual([{ id: "tp1725", name: "Christopher Nolan" }]);
+    expect(title?.cast).toEqual([
+      { name: "Leonardo DiCaprio", character: "Cobb", personId: "tp1641" },
+      { name: "Inconnu", character: null, personId: null },
+    ]);
   });
 
   it("convertit les résultats de recherche et ignore ce qui n'est ni un film ni une série", async () => {
@@ -112,7 +153,7 @@ describe("JustWatchGraphqlCatalog", () => {
         originalReleaseYear: 2010,
         posterUrl: "/poster/8716170/s332/inception.jpg",
         externalIds: { imdbId: "tt1375666", tmdbId: "27205" },
-        directors: [{ name: "Christopher Nolan" }],
+        directors: [{ name: "Christopher Nolan", personId: 1725 }],
       },
     };
     const { fn } = fakeFetch(200, {
@@ -129,6 +170,7 @@ describe("JustWatchGraphqlCatalog", () => {
         imdbId: "tt1375666",
         tmdbId: "27205",
         directors: ["Christopher Nolan"],
+        directorRefs: [{ id: "tp1725", name: "Christopher Nolan" }],
       },
     ]);
   });

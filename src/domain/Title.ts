@@ -1,5 +1,7 @@
 // Film ou série du catalogue.
 
+import type { PersonRef } from "./PersonRef";
+
 export type TitleType = "MOVIE" | "SHOW";
 
 export type Title = {
@@ -13,6 +15,8 @@ export type Title = {
   // Réalisateurs, fournis avec les résultats de recherche (choix d'un candidat à l'import Letterboxd).
   // Facultatif, comme originalTitle.
   directors?: string[];
+  // Liens vers les pages des réalisateurs (identifiants JustWatch). Facultatif : absent des titres enregistrés avant.
+  directorRefs?: PersonRef[];
   year: number | null;
   posterUrl: string | null;
   imdbId: string | null;
