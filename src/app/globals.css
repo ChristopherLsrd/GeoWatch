@@ -1011,3 +1011,25 @@ button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-sele
 @media (max-width: 767px) {
   .person-head { flex-direction: column; }
 }
+
+/* Page d'une classification */
+.rating-head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.rating-head h1, .rating-head p { margin: 0; }
+.rating-note { font-size: 13px; }
+.rating-codes { display: flex; gap: 6px; max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
+.rating-codes a { flex: none; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rating-codes a:hover { border-color: var(--accent); color: var(--text); }
+.rating-codes a.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.rating-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 22px; }
+.rating-filters input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.rating-filters select { max-width: 100%; }
+.rating-years { display: flex; gap: 6px; }
+.rating-years input { width: 92px; height: 48px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--field); }
+.rating-years input:focus { border-color: var(--accent); outline: none; }
+.rating-home { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); cursor: pointer; }
+.rating-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.rating-more { display: flex; justify-content: center; margin-top: 24px; }
+@media (max-width: 600px) {
+  .rating-filters > * { flex: 1 1 100%; }
+  .rating-years input { flex: 1 1 0; width: auto; min-width: 0; }
+}
