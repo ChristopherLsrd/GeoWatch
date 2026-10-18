@@ -17,6 +17,7 @@ export async function resolvePerson(base: CatalogPerson, hint: PersonInfoHint, s
     birthDate: base.birthDate,
     deathDate: null,
     photoUrl: base.photoUrl,
+    photoCredit: base.photoUrl ? { source: "justwatch", url: JUSTWATCH_URL } : null,
     biography: null,
     biographySource: null,
     sourceUrl: null,
@@ -31,7 +32,10 @@ export async function resolvePerson(base: CatalogPerson, hint: PersonInfoHint, s
     if (!person.biography && info.biography) {
       Object.assign(person, { biography: info.biography, biographySource: source.source, sourceUrl: info.sourceUrl });
     }
-    person.photoUrl ??= info.photoUrl;
+    if (!person.photoUrl && info.photoUrl) {
+      person.photoUrl = info.photoUrl;
+      person.photoCredit = { source: source.source, url: info.photoPageUrl ?? info.sourceUrl };
+    }
     person.deathDate ??= info.deathDate;
   }
 

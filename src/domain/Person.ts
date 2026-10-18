@@ -8,6 +8,9 @@ export const PERSON_ROLES: PersonRole[] = ["DIRECTOR", "ACTOR", "OTHER"];
 
 export type BiographySource = "justwatch" | "tmdb" | "wikipedia";
 
+// Crédit affiché sous la photo : sa source et la page où figurent l'auteur et la licence.
+export type PhotoCredit = { source: BiographySource; url: string };
+
 // Personne du catalogue (réalisateur, acteur…), pour sa page.
 export type Person = {
   // « tp1725 ».
@@ -17,6 +20,8 @@ export type Person = {
   birthDate: string | null;
   deathDate: string | null;
   photoUrl: string | null;
+  // Absent des fiches mises en cache avant son introduction.
+  photoCredit: PhotoCredit | null;
   biography: string | null;
   biographySource: BiographySource | null;
   // Page de la source de la biographie, affichée en lien.

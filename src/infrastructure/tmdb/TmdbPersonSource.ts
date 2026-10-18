@@ -38,11 +38,13 @@ export class TmdbPersonSource implements PersonInfoSource {
       if (personId === null) return null;
       const person = await this.json<TmdbPerson>(`/person/${personId}`, { language: "fr-FR" });
       if (!person) return null;
+      const page = `https://www.themoviedb.org/person/${personId}?language=fr`;
       return {
         biography: person.biography?.trim() || null,
         photoUrl: person.profile_path ? `${IMAGE_URL}${person.profile_path}` : null,
+        photoPageUrl: person.profile_path ? page : null,
         deathDate: person.deathday || null,
-        sourceUrl: `https://www.themoviedb.org/person/${personId}?language=fr`,
+        sourceUrl: page,
       };
     } catch {
       return null;

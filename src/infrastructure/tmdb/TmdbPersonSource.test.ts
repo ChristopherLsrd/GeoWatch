@@ -36,6 +36,7 @@ describe("TmdbPersonSource", () => {
     expect(info).toEqual({
       biography: "Bio FR",
       photoUrl: "https://image.tmdb.org/t/p/w300/abc.jpg",
+      photoPageUrl: "https://www.themoviedb.org/person/525?language=fr",
       deathDate: null,
       sourceUrl: "https://www.themoviedb.org/person/525?language=fr",
     });
@@ -49,7 +50,7 @@ describe("TmdbPersonSource", () => {
     });
     const info = await new TmdbPersonSource({ apiKey: "cle", fetch: fn }).find({ name: "X", titles: [{ type: "SHOW", tmdbId: "1399" }] });
     expect(urls[0]).toContain("/tv/1399/aggregate_credits");
-    expect(info).toMatchObject({ biography: null, photoUrl: null, deathDate: "2020-01-01" });
+    expect(info).toMatchObject({ biography: null, photoUrl: null, photoPageUrl: null, deathDate: "2020-01-01" });
   });
 
   it("renvoie null sans clé, sans titre TMDB, sans correspondance ou en cas d'erreur", async () => {

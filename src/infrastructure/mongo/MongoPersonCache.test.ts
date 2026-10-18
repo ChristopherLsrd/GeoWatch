@@ -19,7 +19,7 @@ afterAll(async () => {
 
 function entry(fetchedAt: Date, biography: string): CachedPerson {
   return {
-    person: { id: "tp1725", name: "Christopher Nolan", birthDate: "1970-07-30", deathDate: null, photoUrl: null, biography, biographySource: "wikipedia", sourceUrl: "https://fr.wikipedia.org/wiki/Christopher_Nolan" },
+    person: { id: "tp1725", name: "Christopher Nolan", birthDate: "1970-07-30", deathDate: null, photoUrl: null, photoCredit: null, biography, biographySource: "wikipedia", sourceUrl: "https://fr.wikipedia.org/wiki/Christopher_Nolan" },
     filmography: { DIRECTOR: [], ACTOR: [], OTHER: [] },
     flatrateCountries: ["FR"],
     fetchedAt,

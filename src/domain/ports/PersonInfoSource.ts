@@ -6,6 +6,8 @@ export type PersonInfoHint = { name: string; titles: Pick<Title, "type" | "tmdbI
 export type ExternalPersonInfo = {
   biography: string | null;
   photoUrl: string | null;
+  // Page de la photo (auteur et licence), pour le crédit affiché sous la photo.
+  photoPageUrl: string | null;
   deathDate: string | null;
   sourceUrl: string;
 };

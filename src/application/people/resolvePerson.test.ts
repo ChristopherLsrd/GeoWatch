@@ -26,8 +26,8 @@ function source(name: "tmdb" | "wikipedia", info: ExternalPersonInfo | null | Er
   return { s, calls };
 }
 
-const tmdbInfo: ExternalPersonInfo = { biography: "Bio TMDB", photoUrl: "https://tmdb/p.jpg", deathDate: null, sourceUrl: "https://tmdb/person/1" };
-const wikiInfo: ExternalPersonInfo = { biography: "Bio Wikipédia", photoUrl: "https://wiki/p.jpg", deathDate: null, sourceUrl: "https://fr.wikipedia.org/wiki/X" };
+const tmdbInfo: ExternalPersonInfo = { biography: "Bio TMDB", photoUrl: "https://tmdb/p.jpg", photoPageUrl: "https://tmdb/person/1", deathDate: null, sourceUrl: "https://tmdb/person/1" };
+const wikiInfo: ExternalPersonInfo = { biography: "Bio Wikipédia", photoUrl: "https://wiki/p.jpg", photoPageUrl: "https://commons.wikimedia.org/wiki/File:P.jpg", deathDate: null, sourceUrl: "https://fr.wikipedia.org/wiki/X" };
 
 describe("resolvePerson", () => {
   it("garde la biographie française de JustWatch quand elle diffère de l'anglaise, sans appeler les autres sources si la photo est connue", async () => {
@@ -70,6 +70,18 @@ describe("resolvePerson", () => {
     const wiki = source("wikipedia", wikiInfo);
     const person = await resolvePerson(base, hint, [tmdb.s, wiki.s]);
     expect(person).toMatchObject({ biography: "Bio TMDB", biographySource: "tmdb", photoUrl: "https://wiki/p.jpg" });
+  });
+
+  it("indique la source de la photo, avec sa page", async () => {
+    const jw = await resolvePerson({ ...base, photoUrl: "https://jw/p.jpg" }, hint, []);
+    expect(jw.photoCredit).toEqual({ source: "justwatch", url: JUSTWATCH_URL });
+    const tmdb = await resolvePerson(base, hint, [source("tmdb", tmdbInfo).s]);
+    expect(tmdb.photoCredit).toEqual({ source: "tmdb", url: "https://tmdb/person/1" });
+    // La biographie vient de TMDB, la photo de Wikipédia : chacune garde sa propre source.
+    const mixed = await resolvePerson(base, hint, [source("tmdb", { ...tmdbInfo, photoUrl: null, photoPageUrl: null }).s, source("wikipedia", wikiInfo).s]);
+    expect(mixed).toMatchObject({ biographySource: "tmdb", photoCredit: { source: "wikipedia", url: "https://commons.wikimedia.org/wiki/File:P.jpg" } });
+    const none = await resolvePerson(base, hint, []);
+    expect(none.photoCredit).toBeNull();
   });
 
   it("se replie sur la biographie anglaise de JustWatch en dernier recours", async () => {

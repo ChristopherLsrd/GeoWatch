@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCinemaSummary, WikipediaPersonSource } from "./WikipediaPersonSource";
+import { commonsFilePage, isCinemaSummary, WikipediaPersonSource } from "./WikipediaPersonSource";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -14,7 +14,7 @@ const nolan = {
   type: "standard",
   description: "réalisateur, scénariste et producteur britannico-américain",
   extract: " Christopher Nolan, né le 30 juillet 1970… ",
-  thumbnail: { source: "https://upload.wikimedia.org/nolan.jpg" },
+  thumbnail: { source: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Christopher_Nolan_Cannes_2018.jpg/320px-Christopher_Nolan_Cannes_2018.jpg" },
   content_urls: { desktop: { page: "https://fr.wikipedia.org/wiki/Christopher_Nolan" } },
 };
 
@@ -40,7 +40,8 @@ describe("WikipediaPersonSource", () => {
     expect(new Headers(calls[0].init.headers).get("User-Agent")).toContain("GeoWatch");
     expect(info).toEqual({
       biography: "Christopher Nolan, né le 30 juillet 1970…",
-      photoUrl: "https://upload.wikimedia.org/nolan.jpg",
+      photoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Christopher_Nolan_Cannes_2018.jpg/320px-Christopher_Nolan_Cannes_2018.jpg",
+      photoPageUrl: "https://commons.wikimedia.org/wiki/File:Christopher_Nolan_Cannes_2018.jpg",
       deathDate: null,
       sourceUrl: "https://fr.wikipedia.org/wiki/Christopher_Nolan",
     });
@@ -51,5 +52,26 @@ describe("WikipediaPersonSource", () => {
     expect(await new WikipediaPersonSource({ fetch: fakeFetch(200, { ...nolan, description: "homme politique" }).fn }).find({ name: "X", titles: [] })).toBeNull();
     const failing = (async () => { throw new Error("réseau"); }) as unknown as typeof fetch;
     expect(await new WikipediaPersonSource({ fetch: failing }).find({ name: "X", titles: [] })).toBeNull();
+  });
+});
+
+describe("commonsFilePage", () => {
+  it("donne la page du fichier, où figurent l'auteur et la licence", () => {
+    expect(commonsFilePage("https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Christopher_Nolan_Cannes_2018.jpg/320px-Christopher_Nolan_Cannes_2018.jpg")).toBe(
+      "https://commons.wikimedia.org/wiki/File:Christopher_Nolan_Cannes_2018.jpg",
+    );
+    expect(commonsFilePage("https://upload.wikimedia.org/wikipedia/commons/a/ab/Agn%C3%A8s_Varda.jpg")).toBe(
+      "https://commons.wikimedia.org/wiki/File:Agn%C3%A8s_Varda.jpg",
+    );
+  });
+
+  it("donne la page « Fichier: » de Wikipédia pour une image locale", () => {
+    expect(commonsFilePage("https://upload.wikimedia.org/wikipedia/fr/thumb/1/12/Affiche.png/220px-Affiche.png")).toBe(
+      "https://fr.wikipedia.org/wiki/Fichier:Affiche.png",
+    );
+  });
+
+  it("renvoie null pour une autre adresse", () => {
+    expect(commonsFilePage("https://example.com/p.jpg")).toBeNull();
   });
 });
