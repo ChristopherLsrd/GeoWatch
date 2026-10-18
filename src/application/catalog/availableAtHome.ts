@@ -14,3 +14,15 @@ export function availableAtHome(offers: Offer[], subscriptions: Subscription[]):
     ),
   );
 }
+
+// Lien vers le titre pour un abonnement du badge : le lien direct d'une offre en abonnement
+// de cette plateforme dans ce pays s'il existe, sinon l'URL de l'offre. null sans lien connu.
+export function homeOfferLink(offers: Offer[], subscription: Subscription): string | null {
+  const matching = offers.filter(
+    (offer) =>
+      offer.monetizationType === "FLATRATE" &&
+      offer.platform.id === subscription.platform.id &&
+      offer.country === subscription.country,
+  );
+  return matching.find((offer) => offer.deepLinkUrl)?.deepLinkUrl ?? matching.find((offer) => offer.url)?.url ?? null;
+}
