@@ -1,4 +1,4 @@
-// GET  /api/watchlist                      → { items: WatchlistOverviewItem[] } (du plus récent au plus ancien,
+// GET  /api/watchlist                      → { items: WatchlistOverviewItem[], pending } (du plus récent au plus ancien,
 //                                            avec le résumé de la fiche et le badge « disponible chez moi »)
 // POST /api/watchlist { titleId: "tm92641" } → 201 { item } (200 si déjà présent)
 // Réponse avec l'en-tête Server-Timing (mongo, justwatch, total).
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = withTiming(async () => {
   try {
-    return NextResponse.json({ items: await watchlistOverview.list() });
+    return NextResponse.json(await watchlistOverview.list());
   } catch (error) {
     return apiErrorResponse(error);
   }

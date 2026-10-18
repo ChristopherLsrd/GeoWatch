@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { WatchStatusRepository } from "@/domain/ports/WatchStatusRepository";
 import type { Subscription } from "@/domain/Subscription";
 import type { WatchStatus } from "@/domain/WatchStatus";
-import type { WatchlistItem } from "@/domain/WatchlistItem";
+import type { WatchlistDetails, WatchlistItem } from "@/domain/WatchlistItem";
 import type { Watchlist } from "./Watchlist";
 import { WatchlistOverview } from "./WatchlistOverview";
 
@@ -13,36 +13,15 @@ const subscriptions: Subscription[] = [
   { platform: canal, country: "FR" },
 ];
 
-function item(id: string): WatchlistItem {
+const details = { directors: [] } as unknown as WatchlistDetails;
+
+function item(id: string, withDetails = true): WatchlistItem {
   return {
     title: { id, type: "MOVIE", name: id, year: null, posterUrl: null, imdbId: null, tmdbId: null },
-    details: null,
+    details: withDetails ? details : null,
     note: "",
     addedAt: new Date("2026-10-17"),
   };
-}
-
-function setup(initial: WatchStatus[], check: (id: string) => WatchStatus | Error) {
-  const statuses = new Map(initial.map((s) => [s.titleId, s]));
-  const checked: string[] = [];
-  const repository: WatchStatusRepository = {
-    get: async (id) => statuses.get(id) ?? null,
-    getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
-    list: async () => [...statuses.values()],
-    save: async (s) => void statuses.set(s.titleId, s),
-  };
-  const overview = new WatchlistOverview(
-    { list: async () => [item("tm1"), item("tm2"), item("tm3")] } as unknown as Watchlist,
-    repository,
-    { list: async () => subscriptions, add: async () => {}, remove: async () => {} },
-    async (title) => {
-      checked.push(title.id);
-      const result = check(title.id);
-      if (result instanceof Error) throw result;
-      statuses.set(title.id, result);
-    },
-  );
-  return { overview, checked };
 }
 
 const status = (titleId: string, flatrate?: string[]): WatchStatus => ({
@@ -53,41 +32,60 @@ const status = (titleId: string, flatrate?: string[]): WatchStatus => ({
   checkedAt: new Date(),
 });
 
-const badges = (items: Awaited<ReturnType<WatchlistOverview["list"]>>) =>
+function setup(items: WatchlistItem[], statuses: WatchStatus[]) {
+  const calls: string[] = [];
+  const repository: WatchStatusRepository = {
+    get: async () => null,
+    getMany: async () => {
+      calls.push("getMany");
+      return [];
+    },
+    list: async () => {
+      calls.push("list");
+      return statuses;
+    },
+    save: async () => {},
+  };
+  const overview = new WatchlistOverview(
+    { list: async () => items } as unknown as Watchlist,
+    repository,
+    { list: async () => subscriptions, add: async () => {}, remove: async () => {} },
+  );
+  return { overview, calls };
+}
+
+const badges = (items: Awaited<ReturnType<WatchlistOverview["list"]>>["items"]) =>
   items.map((i) => [i.title.id, i.availableAtHome?.map((s) => s.platform.name) ?? null]);
 
 describe("WatchlistOverview", () => {
-  it("calcule le badge avec les abonnements actuels", async () => {
-    const { overview, checked } = setup(
+  it("calcule le badge avec les abonnements actuels, en lisant tous les états d'un coup", async () => {
+    const { overview, calls } = setup(
+      [item("tm1"), item("tm2"), item("tm3")],
       [status("tm1", ["FR:8", "BE:381"]), status("tm2", []), status("tm3", ["FR:381"])],
-      () => new Error("inutile"),
     );
-    expect(badges(await overview.list())).toEqual([
+    const { items, pending } = await overview.list();
+    expect(badges(items)).toEqual([
       ["tm1", ["Netflix"]],
       ["tm2", []],
       ["tm3", ["Canal+"]],
     ]);
-    expect(checked).toEqual([]);
+    expect(pending).toBe(0);
+    expect(calls).toEqual(["list"]);
   });
 
-  it("vérifie à la volée les titres jamais vérifiés ou vérifiés sans les offres en abonnement", async () => {
-    // tm1 : état ancien, sans flatrate ; tm2 : jamais vérifié.
-    const { overview, checked } = setup([status("tm1"), status("tm3", [])], (id) => status(id, ["FR:8"]));
-    expect(badges(await overview.list())).toEqual([
-      ["tm1", ["Netflix"]],
-      ["tm2", ["Netflix"]],
-      ["tm3", []],
-    ]);
-    expect(checked).toEqual(["tm1", "tm2"]);
-  });
-
-  it("laisse le badge inconnu si la vérification échoue", async () => {
-    const { overview, checked } = setup([], () => new Error("429"));
-    expect(badges(await overview.list())).toEqual([
+  it("ne vérifie rien et compte les titres sans badge ou sans fiche", async () => {
+    // tm1 : état ancien sans flatrate ; tm2 : jamais vérifié ; tm3 : vérifié mais sans fiche ; tm4 : complet.
+    const { overview } = setup(
+      [item("tm1"), item("tm2"), item("tm3", false), item("tm4")],
+      [status("tm1"), status("tm3", []), status("tm4", ["FR:8"])],
+    );
+    const { items, pending } = await overview.list();
+    expect(badges(items)).toEqual([
       ["tm1", null],
       ["tm2", null],
-      ["tm3", null],
+      ["tm3", []],
+      ["tm4", ["Netflix"]],
     ]);
-    expect(checked).toEqual(["tm1"]);
+    expect(pending).toBe(3);
   });
 });

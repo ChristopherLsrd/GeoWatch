@@ -111,14 +111,23 @@ describe("Watchlist", () => {
     expect(await watchlist.list()).toHaveLength(1);
   });
 
-  it("complète à la lecture le résumé des titres ajoutés avant son introduction", async () => {
+  it("ne complète plus rien à la lecture : completeDetails le fait à la demande", async () => {
     const { watchlist, repository, catalogCalls } = setup();
     repository.items.push({ title: inception, details: null, note: "", addedAt: new Date("2026-10-01") });
     const [item] = await watchlist.list();
+    expect(item.details).toBeNull();
+    expect(catalogCalls).toHaveLength(0);
+
+    expect(await watchlist.completeDetails(item)).toBe(true);
     expect(item.details?.directors).toEqual(["Christopher Nolan"]);
     expect(repository.items[0].details?.imdbScore).toBe(8.8);
-    await watchlist.list();
-    expect(catalogCalls).toHaveLength(1);
+    expect(catalogCalls).toEqual(["tm92641"]);
+  });
+
+  it("completeDetails renvoie false pour un titre que le catalogue ne connaît plus", async () => {
+    const { watchlist } = setup();
+    const unknown = { title: { ...inception, id: "tm0" }, details: null, note: "", addedAt: new Date() };
+    expect(await watchlist.completeDetails(unknown)).toBe(false);
   });
 
   it("refuse un titre inconnu du catalogue", async () => {
