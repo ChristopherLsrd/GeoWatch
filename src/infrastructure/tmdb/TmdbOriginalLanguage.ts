@@ -4,9 +4,7 @@
 import type { LanguageCode } from "@/domain/Language";
 import type { OriginalLanguageProvider } from "@/domain/ports/OriginalLanguageProvider";
 import type { Title } from "@/domain/Title";
-
-const API_URL = "https://api.themoviedb.org/3";
-const TIMEOUT_MS = 5_000;
+import { tmdbGet } from "./tmdbGet";
 
 export type TmdbOptions = {
   // Clé API (v3) ou jeton de lecture (v4, commence par « eyJ »).
@@ -30,13 +28,8 @@ export class TmdbOriginalLanguage implements OriginalLanguageProvider {
     const path = `/${title.type === "SHOW" ? "tv" : "movie"}/${encodeURIComponent(title.tmdbId)}`;
     if (this.cache.has(path)) return this.cache.get(path) ?? null;
 
-    const bearer = this.apiKey.startsWith("eyJ");
-    const url = bearer ? `${API_URL}${path}` : `${API_URL}${path}?api_key=${encodeURIComponent(this.apiKey)}`;
     try {
-      const response = await this.fetch(url, {
-        headers: bearer ? { Authorization: `Bearer ${this.apiKey}` } : {},
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      const response = await tmdbGet(this.apiKey, this.fetch, path);
       // Erreur passagère : pas de mise en cache, on réessaiera.
       if (!response.ok) return response.status === 404 ? this.remember(path, null) : null;
       const body = (await response.json()) as { original_language?: string };
