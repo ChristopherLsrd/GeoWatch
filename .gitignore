@@ -18,3 +18,7 @@ next-env.d.ts
 
 # Maquettes de la refonte graphique (locales)
 geowatch-design/
+
+# Superpowers : specs, plans et espace de travail, gardés en local
+docs/superpowers/
+.superpowers/
