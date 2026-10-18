@@ -10,6 +10,9 @@ export type Title = {
   // Titre original (souvent anglais), pour retrouver un film cité sous ce nom (import Letterboxd).
   // Facultatif : absent des titres enregistrés avant son introduction.
   originalTitle?: string | null;
+  // Réalisateurs, fournis avec les résultats de recherche (choix d'un candidat à l'import Letterboxd).
+  // Facultatif, comme originalTitle.
+  directors?: string[];
   year: number | null;
   posterUrl: string | null;
   imdbId: string | null;

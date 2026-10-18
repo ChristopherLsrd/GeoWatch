@@ -23,6 +23,7 @@ const TITLE_FIELDS = `
     originalReleaseYear
     posterUrl(profile: S332, format: JPG)
     externalIds { imdbId tmdbId }
+    directors: credits(role: DIRECTOR) { name }
   }
 `;
 
@@ -91,6 +92,7 @@ type JustWatchTitle = {
     originalReleaseYear: number | null;
     posterUrl: string | null;
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
+    directors?: { name: string }[] | null;
   };
 };
 
@@ -253,6 +255,7 @@ function toTitle(node: JustWatchTitle): Title | null {
     posterUrl: imageUrl(node.content.posterUrl),
     imdbId: node.content.externalIds?.imdbId ?? null,
     tmdbId: node.content.externalIds?.tmdbId ?? null,
+    directors: node.content.directors?.map((d) => d.name) ?? [],
   };
 }
 

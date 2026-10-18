@@ -112,6 +112,7 @@ describe("JustWatchGraphqlCatalog", () => {
         originalReleaseYear: 2010,
         posterUrl: "/poster/8716170/s332/inception.jpg",
         externalIds: { imdbId: "tt1375666", tmdbId: "27205" },
+        directors: [{ name: "Christopher Nolan" }],
       },
     };
     const { fn } = fakeFetch(200, {
@@ -127,6 +128,7 @@ describe("JustWatchGraphqlCatalog", () => {
         posterUrl: "https://images.justwatch.com/poster/8716170/s332/inception.jpg",
         imdbId: "tt1375666",
         tmdbId: "27205",
+        directors: ["Christopher Nolan"],
       },
     ]);
   });
