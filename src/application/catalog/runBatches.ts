@@ -5,6 +5,7 @@
 export type BatchRunResult = "done" | "stopped" | "aborted";
 
 export async function runBatches(
+  // Lots à demander, en ordre croissant : le lot 0, s'il manque, est donc en tête.
   indices: number[],
   // Charge un lot et affiche son résultat ; lève une erreur en cas d'échec.
   load: (index: number) => Promise<void>,
