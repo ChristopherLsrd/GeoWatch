@@ -6,6 +6,7 @@ import { BookmarkIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
+import { PosterScores } from "./PosterScores";
 import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 
 type CardItem = OverviewItem;
@@ -84,6 +85,7 @@ export function WatchlistCards() {
                           <span className="card-poster" />
                         )}
                         <HomeBadge item={item} />
+                        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
                       </span>
                       <span className="card-title">{title.name}</span>
                       {yearLabel && <span className="card-meta">{yearLabel}</span>}

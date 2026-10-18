@@ -1,20 +1,22 @@
 // GET  /api/watchlist                      → { items: WatchlistOverviewItem[] } (du plus récent au plus ancien,
 //                                            avec le résumé de la fiche et le badge « disponible chez moi »)
 // POST /api/watchlist { titleId: "tm92641" } → 201 { item } (200 si déjà présent)
+// Réponse avec l'en-tête Server-Timing (mongo, justwatch, total).
 
 import { NextRequest, NextResponse } from "next/server";
 import { dailyCheck, watchlist, watchlistOverview } from "@/infrastructure/container";
 import { apiErrorResponse } from "../apiErrors";
+import { withTiming } from "../withTiming";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withTiming(async () => {
   try {
     return NextResponse.json({ items: await watchlistOverview.list() });
   } catch (error) {
     return apiErrorResponse(error);
   }
-}
+});
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);

@@ -7,6 +7,7 @@ import type { Offer, Platform } from "@/domain/Offer";
 import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { Title } from "@/domain/Title";
 import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
+import { measure } from "../timing/requestTiming";
 
 const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
 const IMAGES_URL = "https://images.justwatch.com";
@@ -19,9 +20,11 @@ const TITLE_FIELDS = `
   objectType
   content(country: $country, language: $language) {
     title
+    originalTitle
     originalReleaseYear
     posterUrl(profile: S332, format: JPG)
     externalIds { imdbId tmdbId }
+    directors: credits(role: DIRECTOR) { name }
   }
 `;
 
@@ -86,9 +89,11 @@ type JustWatchTitle = {
   objectType: string;
   content: {
     title: string;
+    originalTitle?: string | null;
     originalReleaseYear: number | null;
     posterUrl: string | null;
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
+    directors?: { name: string }[] | null;
   };
 };
 
@@ -210,7 +215,12 @@ ${OFFER_FRAGMENT}`;
     return platforms;
   }
 
-  private async post<T>(body: object): Promise<T> {
+  // Chaque appel compte dans le temps « justwatch » de l'en-tête Server-Timing.
+  private post<T>(body: object): Promise<T> {
+    return measure("justwatch", () => this.send<T>(body));
+  }
+
+  private async send<T>(body: object): Promise<T> {
     let response: Response;
     try {
       response = await this.fetch(GRAPHQL_URL, {
@@ -246,10 +256,12 @@ function toTitle(node: JustWatchTitle): Title | null {
     id: node.id,
     type: node.objectType,
     name: node.content.title,
+    originalTitle: node.content.originalTitle || null,
     year: node.content.originalReleaseYear ?? null,
     posterUrl: imageUrl(node.content.posterUrl),
     imdbId: node.content.externalIds?.imdbId ?? null,
     tmdbId: node.content.externalIds?.tmdbId ?? null,
+    directors: node.content.directors?.map((d) => d.name) ?? [],
   };
 }
 
