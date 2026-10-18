@@ -7,7 +7,7 @@ import type { Offer, Platform } from "@/domain/Offer";
 import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { PersonRef } from "@/domain/PersonRef";
 import type { Title } from "@/domain/Title";
-import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
+import { type AgeRating, MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
 import { JustWatchClient, imageUrl } from "./JustWatchClient";
 
 // La liste des plateformes d'un pays change rarement.
@@ -54,6 +54,8 @@ query GetTitleDetails($nodeId: ID!, $country: Country!, $language: Language!) {
         scoring { imdbScore imdbVotes tmdbScore }
         credits { role name characterName personId }
       }
+        ratingFR: content(country: FR, language: "fr") { ageCertification }
+        ratingUS: content(country: US, language: "en") { ageCertification }
     }
   }
 }`;
@@ -105,6 +107,8 @@ type JustWatchTitleDetails = JustWatchTitle & {
     scoring: { imdbScore: number | null; imdbVotes: number | null; tmdbScore: number | null } | null;
     credits: { role: string; name: string; characterName: string | null; personId?: number | null }[] | null;
   } | null;
+  ratingFR?: { ageCertification: string | null } | null;
+  ratingUS?: { ageCertification: string | null } | null;
 };
 
 type JustWatchOffer = {
@@ -173,7 +177,9 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
     });
     if (!data.node?.content) return null;
     const title = toTitle(data.node);
-    return title ? toTitleDetails(title, data.node.details) : null;
+    return title
+      ? toTitleDetails(title, data.node.details, pickAgeRating(data.node.ratingFR?.ageCertification, data.node.ratingUS?.ageCertification))
+      : null;
   }
 
   // Une seule requête pour plusieurs pays, grâce à un alias GraphQL par pays.
@@ -234,7 +240,7 @@ function personRefs(credits: { name: string; personId?: number | null }[] | null
   return (credits ?? []).filter((c) => c.personId != null).map((c) => ({ id: `tp${c.personId}`, name: c.name }));
 }
 
-function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"]): TitleDetails {
+function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"], ageRating: AgeRating | null): TitleDetails {
   const credits = details?.credits ?? [];
   return {
     ...title,
@@ -242,6 +248,9 @@ function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"])
     // JustWatch ne la fournit pas : complétée par GetTitle.
     originalLanguage: null,
     trailer: null,
+    ageRating,
+    // Fourni par IMDb : complété par GetTitle.
+    advisory: null,
     synopsis: details?.shortDescription?.trim() || null,
     runtime: details?.runtime || null,
     releaseDate: details?.originalReleaseDate ?? null,
@@ -255,6 +264,13 @@ function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"])
       .slice(0, MAX_CAST)
       .map((c) => ({ name: c.name, character: c.characterName || null, personId: c.personId != null ? `tp${c.personId}` : null })),
   };
+}
+
+// Classification d'âge : France si renseignée, sinon États-Unis.
+export function pickAgeRating(fr: string | null | undefined, us: string | null | undefined): AgeRating | null {
+  if (fr?.trim()) return { country: "FR", code: fr.trim() };
+  if (us?.trim()) return { country: "US", code: us.trim() };
+  return null;
 }
 
 function cleanUrl(url: string | null | undefined): string | null {

@@ -55,6 +55,8 @@ const inceptionDetails: TitleDetails = {
   tmdbScore: 8.4,
   directors: ["Christopher Nolan"],
   cast: [{ name: "Leonardo DiCaprio", character: "Dom Cobb" }],
+  ageRating: null,
+  advisory: null,
 };
 
 function setup() {
