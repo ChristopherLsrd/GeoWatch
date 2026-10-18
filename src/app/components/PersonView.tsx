@@ -109,6 +109,7 @@ export function PersonView({ id, initialRole }: { id: string; initialRole?: stri
 
 function PersonHeader({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
+  const [bioShown, setBioShown] = useState(false);
   const life = formatLifeDates(person.birthDate, person.deathDate, new Date());
   const biography = person.biography?.trim() ?? "";
   const long = biography.length > BIOGRAPHY_LIMIT;
@@ -126,22 +127,40 @@ function PersonHeader({ person }: { person: Person }) {
         <h1>{person.name}</h1>
         {life && <p className="title-meta">{life}</p>}
         {biography && (
-          <div className="synopsis">
-            <p>{text}</p>
-            {long && (
-              <button type="button" className="ghost link-accent" aria-expanded={open} onClick={() => setOpen(!open)}>
-                {open ? "Réduire" : "Lire la suite"}
-              </button>
+          <button
+            type="button"
+            className="ghost link-accent person-bio-toggle"
+            aria-expanded={bioShown}
+            aria-controls="person-bio"
+            onClick={() => setBioShown(!bioShown)}
+          >
+            {bioShown ? "Masquer la biographie" : "Voir la biographie"}
+          </button>
+        )}
+        {(biography || (person.biographySource && person.sourceUrl)) && (
+          <div
+            id="person-bio"
+            className={`person-bio${biography ? " person-bio-collapsible" : ""}${bioShown ? " is-shown" : ""}`}
+          >
+            {biography && (
+              <div className="synopsis">
+                <p>{text}</p>
+                {long && (
+                  <button type="button" className="ghost link-accent" aria-expanded={open} onClick={() => setOpen(!open)}>
+                    {open ? "Réduire" : "Lire la suite"}
+                  </button>
+                )}
+              </div>
+            )}
+            {person.biographySource && person.sourceUrl && (
+              <p className="muted">
+                Source :{" "}
+                <a href={person.sourceUrl} target="_blank" rel="noopener noreferrer">
+                  {SOURCE_LABELS[person.biographySource]}
+                </a>
+              </p>
             )}
           </div>
-        )}
-        {person.biographySource && person.sourceUrl && (
-          <p className="muted">
-            Source :{" "}
-            <a href={person.sourceUrl} target="_blank" rel="noopener noreferrer">
-              {SOURCE_LABELS[person.biographySource]}
-            </a>
-          </p>
         )}
       </div>
     </header>
