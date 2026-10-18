@@ -945,3 +945,22 @@ button.ghost.link-accent:hover:not(:disabled) { color: var(--accent-hover); }
 .import-missing li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .import-missing a { display: inline-flex; align-items: center; min-height: 44px; }
 .import-flow { display: flex; flex-direction: column; gap: 22px; }
+
+/* Page personne */
+button.back-link { padding: 0; font-family: inherit; }
+.person-head { display: flex; flex-direction: row; gap: 28px; align-items: flex-start; margin: 0; }
+.person-photo { flex: none; display: block; width: 160px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: var(--radius); background: var(--badge); border: 1px solid rgba(255, 255, 255, 0.07); }
+.person-photo-empty { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.person-photo-empty svg { width: 56px; height: 56px; }
+.person-info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.person-info h1 { margin: 0; }
+.person-info p { margin: 0; }
+.person-error { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.person-error p { margin: 0; }
+.person-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+button.ghost.person-tab { border-radius: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+button.ghost.person-tab:hover:not(:disabled) { border-color: transparent transparent var(--border-strong); }
+button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-selected="true"]:hover:not(:disabled) { color: var(--text); border-bottom-color: var(--accent); }
+@media (max-width: 767px) {
+  .person-head { flex-direction: column; }
+}
