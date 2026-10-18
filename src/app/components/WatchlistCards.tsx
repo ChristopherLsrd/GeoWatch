@@ -1,43 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { BookmarkIcon } from "@heroicons/react/24/outline";
-import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
-import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
-import { PosterScores } from "./PosterScores";
+import { directorsLabel } from "./HomeBadge";
+import { TitleCard } from "./TitleCard";
+import { useWatchlist } from "./useWatchlist";
 import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
-
-type CardItem = OverviewItem;
-
-type State =
-  | { kind: "loading" }
-  | { kind: "ready"; items: CardItem[] }
-  | { kind: "error" };
 
 // Liste à voir de l'accueil : affiche, titre, année et réalisateur ; chaque carte mène à la page du titre.
 export function WatchlistCards() {
-  const [state, setState] = useState<State>({ kind: "loading" });
-  const [items, setItems] = useState<CardItem[]>([]);
+  const { state } = useWatchlist();
+  const items = state.kind === "ready" ? state.items : [];
   const browser = useWatchlistBrowser(items, "geowatch:sort:home");
-
-  useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const response = await apiFetch("/api/watchlist", controller.signal);
-        if (!response.ok) throw new Error(String(response.status));
-        const body = (await response.json()) as { items: CardItem[] };
-        if (controller.signal.aborted) return;
-        setItems(body.items);
-        setState({ kind: "ready", items: body.items });
-      } catch {
-        if (!controller.signal.aborted) setState({ kind: "error" });
-      }
-    })();
-    return () => controller.abort();
-  }, []);
 
   if (state.kind === "loading") return null;
 
@@ -69,32 +44,15 @@ export function WatchlistCards() {
                 const yearLabel = yearWithRuntime(title.year, item.details?.runtime);
                 return (
                   <li key={title.id}>
-                    <Link
-                      href={`/titre/${encodeURIComponent(title.id)}`}
-                      className="card"
-                    >
-                      <span className="card-media">
-                        {title.posterUrl ? (
-                          <img
-                            className="card-poster"
-                            src={title.posterUrl}
-                            alt=""
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="card-poster" />
-                        )}
-                        <HomeBadge item={item} />
-                        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
-                      </span>
-                      <span className="card-title">{title.name}</span>
-                      {yearLabel && <span className="card-meta">{yearLabel}</span>}
-                      {director && (
-                        <span className="card-meta" title={director}>
-                          {director}
-                        </span>
-                      )}
-                    </Link>
+                    <TitleCard
+                      id={title.id}
+                      name={title.name}
+                      posterUrl={title.posterUrl}
+                      meta={[yearLabel, director]}
+                      availableAtHome={item.availableAtHome}
+                      imdbScore={item.details?.imdbScore}
+                      tmdbScore={item.details?.tmdbScore}
+                    />
                   </li>
                 );
               })}

@@ -1,6 +1,7 @@
 import type { Title } from "./Title";
 
-export type CastMember = { name: string; character: string | null };
+// personId : « tp1641 », pour le lien vers sa page ; absent des fiches en cache avant son ajout.
+export type CastMember = { name: string; character: string | null; personId?: string | null };
 
 // Fiche complète d'un titre, pour sa page.
 export type TitleDetails = Title & {

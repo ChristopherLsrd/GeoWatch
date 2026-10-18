@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Title } from "@/domain/Title";
 import { ClockIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
+import { ROLE_PARAMS } from "./personRoles";
 
 type State =
   | { kind: "idle" }
@@ -174,19 +175,52 @@ export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
         <ul className="results">
           {state.titles.map((title) => (
             <li key={title.id}>
-              <Link href={`/titre/${encodeURIComponent(title.id)}`} className="result" onClick={() => record(query, true)}>
+              <div className="result">
                 {title.posterUrl ? (
                   <img className="poster" src={title.posterUrl} alt="" loading="lazy" />
                 ) : (
                   <div className="poster" />
                 )}
                 <div>
-                  <div className="result-title">{title.name}</div>
+                  <div className="result-title">
+                    <Link
+                      href={`/titre/${encodeURIComponent(title.id)}`}
+                      className="result-link"
+                      onClick={() => record(query, true)}
+                    >
+                      {title.name}
+                    </Link>
+                  </div>
                   <div className="muted">
                     {title.year ?? "année inconnue"} · {title.type === "MOVIE" ? "Film" : "Série"}
                   </div>
+                  {(title.directors?.length ?? 0) > 0 && (
+                    <div className="muted result-directors">
+                      De{" "}
+                      {(title.directors ?? []).slice(0, 2).map((name, index) => {
+                        const ref = title.directorRefs?.find((candidate) => candidate.name === name);
+                        return (
+                          <Fragment key={`${name}-${index}`}>
+                            {index > 0 && ", "}
+                            {ref ? (
+                              <Link
+                                href={`/personne/${ref.id}?role=${ROLE_PARAMS.DIRECTOR}`}
+                                className="person-link result-director"
+                                onClick={() => record(query, true)}
+                              >
+                                {name}
+                              </Link>
+                            ) : (
+                              name
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                      {(title.directors?.length ?? 0) > 2 && "…"}
+                    </div>
+                  )}
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

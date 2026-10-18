@@ -16,6 +16,10 @@ export class MongoWatchStatusRepository implements WatchStatusRepository {
     return (await (await this.collection()).find({ _id: { $in: titleIds } }).toArray()).map(toStatus);
   }
 
+  async list(): Promise<WatchStatus[]> {
+    return (await (await this.collection()).find().toArray()).map(toStatus);
+  }
+
   async save(status: WatchStatus): Promise<void> {
     await (await this.collection()).replaceOne(
       { _id: status.titleId },

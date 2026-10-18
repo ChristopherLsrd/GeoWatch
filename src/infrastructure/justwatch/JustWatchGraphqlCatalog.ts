@@ -4,14 +4,12 @@
 import { isCountryCode, type CountryCode } from "@/domain/Country";
 import { isMonetizationType } from "@/domain/MonetizationType";
 import type { Offer, Platform } from "@/domain/Offer";
-import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
+import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
+import type { PersonRef } from "@/domain/PersonRef";
 import type { Title } from "@/domain/Title";
 import { MAX_CAST, type TitleDetails } from "@/domain/TitleDetails";
-import { measure } from "../timing/requestTiming";
+import { JustWatchClient, imageUrl } from "./JustWatchClient";
 
-const GRAPHQL_URL = "https://apis.justwatch.com/graphql";
-const IMAGES_URL = "https://images.justwatch.com";
-const TIMEOUT_MS = 20_000;
 // La liste des plateformes d'un pays change rarement.
 const PLATFORMS_TTL_MS = 24 * 3600 * 1000;
 
@@ -24,7 +22,7 @@ const TITLE_FIELDS = `
     originalReleaseYear
     posterUrl(profile: S332, format: JPG)
     externalIds { imdbId tmdbId }
-    directors: credits(role: DIRECTOR) { name }
+    directors: credits(role: DIRECTOR) { name personId }
   }
 `;
 
@@ -54,7 +52,7 @@ query GetTitleDetails($nodeId: ID!, $country: Country!, $language: Language!) {
         originalReleaseDate
         genres { translation(language: $language) }
         scoring { imdbScore imdbVotes tmdbScore }
-        credits { role name characterName }
+        credits { role name characterName personId }
       }
     }
   }
@@ -93,7 +91,7 @@ type JustWatchTitle = {
     originalReleaseYear: number | null;
     posterUrl: string | null;
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
-    directors?: { name: string }[] | null;
+    directors?: { name: string; personId?: number | null }[] | null;
   };
 };
 
@@ -105,7 +103,7 @@ type JustWatchTitleDetails = JustWatchTitle & {
     originalReleaseDate: string | null;
     genres: { translation: string | null }[] | null;
     scoring: { imdbScore: number | null; imdbVotes: number | null; tmdbScore: number | null } | null;
-    credits: { role: string; name: string; characterName: string | null }[] | null;
+    credits: { role: string; name: string; characterName: string | null; personId?: number | null }[] | null;
   } | null;
 };
 
@@ -134,18 +132,18 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
   private readonly country: CountryCode;
   private readonly language: string;
   private readonly searchResultCount: number;
-  private readonly fetch: typeof fetch;
+  private readonly client: JustWatchClient;
   private readonly platformsCache = new Map<CountryCode, { platforms: Platform[]; expiresAt: number }>();
 
   constructor(options: JustWatchOptions = {}) {
     this.country = options.country ?? "FR";
     this.language = options.language ?? "fr";
     this.searchResultCount = options.searchResultCount ?? 10;
-    this.fetch = options.fetch ?? fetch;
+    this.client = new JustWatchClient(options.fetch ?? fetch);
   }
 
   async searchTitles(query: string): Promise<Title[]> {
-    const data = await this.post<{ popularTitles: { edges: { node: JustWatchTitle }[] } }>({
+    const data = await this.client.post<{ popularTitles: { edges: { node: JustWatchTitle }[] } }>({
       operationName: "GetSearchTitles",
       variables: {
         first: this.searchResultCount,
@@ -159,7 +157,7 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
   }
 
   async getTitle(titleId: string): Promise<Title | null> {
-    const data = await this.post<{ node: JustWatchTitle | null }>({
+    const data = await this.client.post<{ node: JustWatchTitle | null }>({
       operationName: "GetTitleNode",
       variables: { nodeId: titleId, country: this.country, language: this.language },
       query: TITLE_QUERY,
@@ -168,7 +166,7 @@ export class JustWatchGraphqlCatalog implements CatalogProvider {
   }
 
   async getTitleDetails(titleId: string): Promise<TitleDetails | null> {
-    const data = await this.post<{ node: JustWatchTitleDetails | null }>({
+    const data = await this.client.post<{ node: JustWatchTitleDetails | null }>({
       operationName: "GetTitleDetails",
       variables: { nodeId: titleId, country: this.country, language: this.language },
       query: TITLE_DETAILS_QUERY,
@@ -191,7 +189,7 @@ query GetTitleOffers($nodeId: ID!, $language: Language!, $filter: OfferFilter!) 
   }
 }
 ${OFFER_FRAGMENT}`;
-    const data = await this.post<{ node: Record<string, JustWatchOffer[] | null> | null }>({
+    const data = await this.client.post<{ node: Record<string, JustWatchOffer[] | null> | null }>({
       operationName: "GetTitleOffers",
       variables: { nodeId: titleId, language: this.language, filter: { bestOnly: false } },
       query,
@@ -204,7 +202,7 @@ ${OFFER_FRAGMENT}`;
   async listSubscriptionPlatforms(country: CountryCode): Promise<Platform[]> {
     const cached = this.platformsCache.get(country);
     if (cached && cached.expiresAt > Date.now()) return cached.platforms;
-    const data = await this.post<{
+    const data = await this.client.post<{
       packages: { packageId: number; clearName: string; monetizationTypes: string[] | null; icon: string | null }[];
     }>({ operationName: "GetProviders", variables: { country }, query: PACKAGES_QUERY });
     const platforms = data.packages
@@ -214,40 +212,6 @@ ${OFFER_FRAGMENT}`;
     this.platformsCache.set(country, { platforms, expiresAt: Date.now() + PLATFORMS_TTL_MS });
     return platforms;
   }
-
-  // Chaque appel compte dans le temps « justwatch » de l'en-tête Server-Timing.
-  private post<T>(body: object): Promise<T> {
-    return measure("justwatch", () => this.send<T>(body));
-  }
-
-  private async send<T>(body: object): Promise<T> {
-    let response: Response;
-    try {
-      response = await this.fetch(GRAPHQL_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        cache: "no-store",
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-    } catch (error) {
-      throw new CatalogUnavailableError("JustWatch injoignable", error);
-    }
-    // 429 : limitation ; 403 : blocage ; 5xx : panne. Dans tous les cas, on s'arrête proprement.
-    if (response.status === 429 || response.status === 403 || response.status >= 500) {
-      throw new CatalogUnavailableError(`JustWatch a répondu ${response.status}`);
-    }
-    const json = await response.json().catch(() => null);
-    if (!response.ok || !json || json.errors) {
-      throw new Error(`Réponse JustWatch inattendue (${response.status}) : ${JSON.stringify(json?.errors ?? json).slice(0, 300)}`);
-    }
-    return json.data as T;
-  }
-}
-
-function imageUrl(path: string | null): string | null {
-  if (!path) return null;
-  return path.startsWith("http") ? path : `${IMAGES_URL}${path}`;
 }
 
 function toTitle(node: JustWatchTitle): Title | null {
@@ -262,7 +226,12 @@ function toTitle(node: JustWatchTitle): Title | null {
     imdbId: node.content.externalIds?.imdbId ?? null,
     tmdbId: node.content.externalIds?.tmdbId ?? null,
     directors: node.content.directors?.map((d) => d.name) ?? [],
+    directorRefs: personRefs(node.content.directors),
   };
+}
+
+function personRefs(credits: { name: string; personId?: number | null }[] | null | undefined): PersonRef[] {
+  return (credits ?? []).filter((c) => c.personId != null).map((c) => ({ id: `tp${c.personId}`, name: c.name }));
 }
 
 function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"]): TitleDetails {
@@ -283,7 +252,7 @@ function toTitleDetails(title: Title, details: JustWatchTitleDetails["details"])
     cast: credits
       .filter((c) => c.role === "ACTOR")
       .slice(0, MAX_CAST)
-      .map((c) => ({ name: c.name, character: c.characterName || null })),
+      .map((c) => ({ name: c.name, character: c.characterName || null, personId: c.personId != null ? `tp${c.personId}` : null })),
   };
 }
 

@@ -66,8 +66,9 @@ export class DailyCheck {
   }
 
   // Vérifie un seul titre (par exemple à son ajout dans la liste), sans attendre le cron.
-  async checkTitle(title: Title): Promise<void> {
-    await this.check(title, await this.subscriptions.list());
+  // Les abonnements peuvent être fournis pour éviter de les relire à chaque titre.
+  async checkTitle(title: Title, subscriptions?: Subscription[]): Promise<void> {
+    await this.check(title, subscriptions ?? (await this.subscriptions.list()));
   }
 
   // Renvoie le nombre de nouveautés signalées.

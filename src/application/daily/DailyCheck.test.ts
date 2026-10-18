@@ -57,6 +57,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   const statusRepo: WatchStatusRepository = {
     get: async (id) => statuses.get(id) ?? null,
     getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
+    list: async () => [...statuses.values()],
     save: async (status) => void statuses.set(status.titleId, status),
   };
   const stored: Alert[] = [];

@@ -1,15 +1,12 @@
 // Gestion de la liste à voir.
 
-import { CatalogUnavailableError, type CatalogProvider } from "@/domain/ports/CatalogProvider";
+import type { CatalogProvider } from "@/domain/ports/CatalogProvider";
 import type { WatchlistRepository } from "@/domain/ports/WatchlistRepository";
 import { MAX_NOTE_LENGTH, toWatchlistEntry, type WatchlistItem } from "@/domain/WatchlistItem";
 
 export class TitleNotFoundError extends Error {}
 export class NotInWatchlistError extends Error {}
 export class InvalidNoteError extends Error {}
-
-// Nombre maximal de titres complétés par lecture, pour rester raisonnable avec le catalogue.
-const BACKFILL_LIMIT = 20;
 
 export class Watchlist {
   constructor(
@@ -18,21 +15,18 @@ export class Watchlist {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  // Complète au passage le résumé des titres ajoutés avant son introduction.
-  async list(): Promise<WatchlistItem[]> {
-    const items = await this.repository.list();
-    for (const item of items.filter((i) => !i.details).slice(0, BACKFILL_LIMIT)) {
-      try {
-        const details = await this.catalog.getTitleDetails(item.title.id);
-        if (!details) continue;
-        item.details = toWatchlistEntry(details, this.clock()).details;
-        await this.repository.updateDetails(item.title.id, item.details);
-      } catch (error) {
-        if (error instanceof CatalogUnavailableError) break;
-        throw error;
-      }
-    }
-    return items;
+  list(): Promise<WatchlistItem[]> {
+    return this.repository.list();
+  }
+
+  // Complète le résumé d'un titre ajouté avant son introduction (WatchlistCheck).
+  // Renvoie false si le catalogue ne connaît plus le titre. CatalogUnavailableError est propagée.
+  async completeDetails(item: WatchlistItem): Promise<boolean> {
+    const details = await this.catalog.getTitleDetails(item.title.id);
+    if (!details) return false;
+    item.details = toWatchlistEntry(details, this.clock()).details;
+    await this.repository.updateDetails(item.title.id, item.details);
+    return true;
   }
 
   get(titleId: string): Promise<WatchlistItem | null> {
