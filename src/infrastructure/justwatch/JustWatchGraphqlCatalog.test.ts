@@ -108,9 +108,11 @@ describe("JustWatchGraphqlCatalog", () => {
       objectType: "MOVIE",
       content: {
         title: "Inception",
+        originalTitle: "Inception",
         originalReleaseYear: 2010,
         posterUrl: "/poster/8716170/s332/inception.jpg",
         externalIds: { imdbId: "tt1375666", tmdbId: "27205" },
+        directors: [{ name: "Christopher Nolan" }],
       },
     };
     const { fn } = fakeFetch(200, {
@@ -121,10 +123,12 @@ describe("JustWatchGraphqlCatalog", () => {
         id: "tm92641",
         type: "MOVIE",
         name: "Inception",
+        originalTitle: "Inception",
         year: 2010,
         posterUrl: "https://images.justwatch.com/poster/8716170/s332/inception.jpg",
         imdbId: "tt1375666",
         tmdbId: "27205",
+        directors: ["Christopher Nolan"],
       },
     ]);
   });

@@ -93,6 +93,14 @@ describe("Watchlist", () => {
     expect((await watchlist.list()).map((i) => i.title.imdbId)).toEqual(["tt1375666"]);
   });
 
+  it("garde la date d'ajout fournie (import Letterboxd)", async () => {
+    const { watchlist, now } = setup();
+    const addedAt = new Date("2024-03-05T12:00:00Z");
+    const item = await watchlist.add("tm92641", { addedAt });
+    expect(item.addedAt).toEqual(addedAt);
+    expect(item.details?.fetchedAt).toEqual(now);
+  });
+
   it("ne duplique pas un titre déjà présent et garde sa note", async () => {
     const { watchlist, catalogCalls } = setup();
     await watchlist.add("tm92641");
