@@ -6,6 +6,7 @@ import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { LetterboxdCsvError, parseLetterboxdCsv, type LetterboxdEntry } from "@/application/import/parseLetterboxdCsv";
 import type { ImportResult } from "@/application/import/ImportLetterboxd";
 import { apiFetch } from "./apiFetch";
+import { formatDirectors } from "./HomeBadge";
 
 // Même valeur que MAX_BATCH côté serveur (copiée pour ne pas embarquer de code serveur).
 const BATCH_SIZE = 5;
@@ -73,6 +74,12 @@ function AmbiguousCard({
                 <strong>{title.name}</strong>
                 <br />
                 <span className="muted">{title.year ?? "année inconnue"}</span>
+                {title.directors && title.directors.length > 0 && (
+                  <>
+                    <br />
+                    <span className="muted">De {formatDirectors(title.directors)}</span>
+                  </>
+                )}
               </span>
             </button>
           </li>

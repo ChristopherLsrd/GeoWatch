@@ -9,10 +9,13 @@ export type OverviewItem = Omit<WatchlistOverviewItem, "addedAt"> & {
 };
 
 // Réalisateurs : 2 au maximum, puis « … ». Chaîne vide si inconnus.
-export function directorsLabel(details: OverviewItem["details"]): string {
-  const directors = details?.directors ?? [];
+export function formatDirectors(directors: string[]): string {
   if (directors.length === 0) return "";
   return directors.slice(0, 2).join(", ") + (directors.length > 2 ? "…" : "");
+}
+
+export function directorsLabel(details: OverviewItem["details"]): string {
+  return formatDirectors(details?.directors ?? []);
 }
 
 // Badge en surimpression sur l'affiche, ou dans le texte (inline), comme dans « Ma liste ».
