@@ -9,8 +9,8 @@ import { importLetterboxd } from "@/infrastructure/container";
 import { apiErrorResponse } from "../../apiErrors";
 
 export const dynamic = "force-dynamic";
-// 5 films × (recherche + fiche + pause de 1 s) : largement moins d'une minute.
-export const maxDuration = 60;
+// 5 films × (recherche + fiche + pause de 1 s), avec 20 s de délai maximal par appel JustWatch : on prend la limite Hobby.
+export const maxDuration = 300;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 

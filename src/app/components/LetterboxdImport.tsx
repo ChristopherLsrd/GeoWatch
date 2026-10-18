@@ -9,6 +9,8 @@ import { apiFetch } from "./apiFetch";
 
 // Même valeur que MAX_BATCH côté serveur (copiée pour ne pas embarquer de code serveur).
 const BATCH_SIZE = 5;
+// Pause entre deux lots (le serveur pause déjà 1 s entre les films d'un lot).
+const BATCH_PAUSE_MS = 1000;
 
 type Stopped = "user" | "catalog" | "network" | "error" | null;
 type Ambiguous = Extract<ImportResult, { status: "ambiguous" }>;
@@ -102,6 +104,7 @@ export function LetterboxdImport() {
   const [resolved, setResolved] = useState<Record<string, "added" | "dismissed">>({});
   const [over, setOver] = useState(false);
   const stopRef = useRef(false);
+  const runningRef = useRef(false);
 
   // Quitter la page arrête la boucle : plus aucun lot n'est envoyé (les mises à jour d'état après démontage sont sans effet).
   useEffect(() => {
@@ -130,12 +133,30 @@ export function LetterboxdImport() {
   }
 
   async function run(start: LetterboxdEntry[]) {
+    // Garde contre un double clic avant le re-rendu : une seule boucle à la fois.
+    if (runningRef.current) return;
+    runningRef.current = true;
+    try {
+      await runLoop(start);
+    } finally {
+      runningRef.current = false;
+    }
+  }
+
+  async function runLoop(start: LetterboxdEntry[]) {
     stopRef.current = false;
     setRunning(true);
     setStopped(null);
     let pending = start;
     let reason: Stopped = null;
+    let firstBatch = true;
     while (pending.length > 0 && !stopRef.current) {
+      // Le serveur ne fait de pause qu'entre les films d'un lot : on la prolonge entre les lots.
+      if (!firstBatch) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));
+        if (stopRef.current) break;
+      }
+      firstBatch = false;
       const batch = pending.slice(0, BATCH_SIZE);
       let response: Response;
       try {

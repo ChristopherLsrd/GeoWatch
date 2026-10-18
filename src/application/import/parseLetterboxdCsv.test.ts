@@ -33,6 +33,11 @@ describe("parseLetterboxdCsv", () => {
     ]);
   });
 
+  it("traite une année hors de 1801-2999 comme absente (bornes de la route d'import)", () => {
+    const csv = "Date,Name,Year,Letterboxd URI\n,A,0000,\n,B,1800,\n,C,1801,\n,D,2999,\n,E,3000,\n";
+    expect(parseLetterboxdCsv(csv).entries.map((e) => e.year)).toEqual([null, null, 1801, 2999, null]);
+  });
+
   it("ignore et compte les lignes sans titre ou au titre trop long, sans compter les lignes vides", () => {
     const csv = `Date,Name,Year,Letterboxd URI\n2024-01-01,,2010,\n\n2024-01-01,${"x".repeat(301)},2010,\n2024-01-01,Ok,2010,\n`;
     const result = parseLetterboxdCsv(csv);

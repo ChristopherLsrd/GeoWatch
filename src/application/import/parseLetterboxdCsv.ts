@@ -73,7 +73,9 @@ export function parseLetterboxdCsv(text: string): { entries: LetterboxdEntry[]; 
       skipped++;
       continue;
     }
-    const year = /^\d{4}$/.test(cell(yearCol)) ? Number(cell(yearCol)) : null;
+    // Mêmes bornes que la route d'import (1800 < année < 3000) : une année absurde vaut « absente ».
+    const rawYear = /^\d{4}$/.test(cell(yearCol)) ? Number(cell(yearCol)) : null;
+    const year = rawYear !== null && rawYear > 1800 && rawYear < 3000 ? rawYear : null;
     const addedAt = /^\d{4}-\d{2}-\d{2}$/.test(cell(dateCol)) ? cell(dateCol) : null;
     const uri = cell(uriCol);
     entries.push({ name, year, addedAt, letterboxdUri: uri.startsWith("https://") ? uri : null });

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Title } from "@/domain/Title";
 import { ClockIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
@@ -19,9 +18,9 @@ const DEBOUNCE_MS = 300;
 const HISTORY_VISIBLE = 10;
 const HISTORY_MAX = 50;
 
-export function SearchBox() {
-  // Recherche préremplie par ?q= (lien « Chercher dans GeoWatch » de l'import Letterboxd) ; l'anti-rebond la lance.
-  const [query, setQuery] = useState(useSearchParams().get("q") ?? "");
+export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
+  // Recherche préremplie (?q=, lien « Chercher dans GeoWatch » de l'import Letterboxd) ; l'anti-rebond la lance.
+  const [query, setQuery] = useState(initialQuery);
   const [state, setState] = useState<State>({ kind: "idle" });
   const controller = useRef<AbortController | null>(null);
   const lastSearched = useRef("");
