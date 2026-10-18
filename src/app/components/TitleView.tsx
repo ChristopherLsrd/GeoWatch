@@ -1,34 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, HomeIcon } from "@heroicons/react/24/outline";
 import { availableAtHome, homeOfferLink } from "@/application/catalog/availableAtHome";
-import { countryBatches } from "@/application/catalog/countryBatches";
 import { countryFlag, countryName } from "@/domain/Country";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
 import { languageName } from "@/domain/Language";
-import type { Offer } from "@/domain/Offer";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
 import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
 import { ROLE_PARAMS } from "./personRoles";
+import { useAvailabilityBatches } from "./useAvailabilityBatches";
 import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
-
-const BATCHES = countryBatches();
-const TOTAL_COUNTRIES = BATCHES.reduce((sum, batch) => sum + batch.length, 0);
 
 type TitleState =
   | { kind: "loading" }
   | { kind: "ready"; title: TitleDetails }
   | { kind: "not_found" }
   | { kind: "error" };
-
-// « loading » : un lot est en cours ; « stopped » : arrêt après une erreur ; « done » : tous les lots sont faits.
-type LoadStatus = "loading" | "stopped" | "done";
 
 const PARIS = "Europe/Paris";
 
@@ -62,62 +55,15 @@ function ratingPills(title: TitleDetails) {
 
 export function TitleView({ id }: { id: string }) {
   const [titleState, setTitleState] = useState<TitleState>({ kind: "loading" });
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [checkedAt, setCheckedAt] = useState<Record<string, string>>({});
-  const [nextBatch, setNextBatch] = useState(0);
-  const [status, setStatus] = useState<LoadStatus>("loading");
+  const { offers, checkedAt, status, checkedCountries, missingCountries, totalCountries, retry, refresh } =
+    useAvailabilityBatches(id);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   // undefined tant que non chargées ; null si aucune préférence ou échec.
   const [prefs, setPrefs] = useState<{ audio: string | null; subtitles: string | null } | undefined>();
 
-  const nextBatchRef = useRef(0);
-  const refreshRef = useRef(false);
-  const controller = useRef<AbortController | null>(null);
-
-  // Interroge les lots l'un après l'autre à partir de `start`, en affichant les résultats au fil de l'eau.
-  // Avec `refresh`, le cache serveur est ignoré ; le mode est mémorisé pour que « Réessayer » le conserve.
-  const loadBatches = useCallback(
-    async (start: number, refresh: boolean) => {
-      refreshRef.current = refresh;
-      controller.current?.abort();
-      const current = new AbortController();
-      controller.current = current;
-      setStatus("loading");
-
-      for (let i = start; i < BATCHES.length; i++) {
-        try {
-          const response = await apiFetch(
-            `/api/titles/${encodeURIComponent(id)}/availability?countries=${BATCHES[i].join(",")}${refresh ? "&refresh=1" : ""}`,
-            current.signal,
-          );
-          if (!response.ok) throw new Error(String(response.status));
-          const body = (await response.json()) as {
-            offers: Record<string, Offer[]>;
-            checkedAt: Record<string, string>;
-          };
-          if (current.signal.aborted) return;
-          setOffers((previous) => [...previous, ...Object.values(body.offers).flat()]);
-          setCheckedAt((previous) => ({ ...previous, ...body.checkedAt }));
-          nextBatchRef.current = i + 1;
-          setNextBatch(i + 1);
-        } catch {
-          // 503, erreur réseau ou autre : arrêt propre, on garde ce qui est affiché.
-          if (!current.signal.aborted) setStatus("stopped");
-          return;
-        }
-      }
-      setStatus("done");
-    },
-    [id],
-  );
-
   useEffect(() => {
     const current = new AbortController();
     setTitleState({ kind: "loading" });
-    setOffers([]);
-    setCheckedAt({});
-    setNextBatch(0);
-    nextBatchRef.current = 0;
 
     (async () => {
       try {
@@ -131,12 +77,8 @@ export function TitleView({ id }: { id: string }) {
       }
     })();
 
-    void loadBatches(0, false);
-    return () => {
-      current.abort();
-      controller.current?.abort();
-    };
-  }, [id, loadBatches]);
+    return () => current.abort();
+  }, [id]);
 
   // Abonnements chargés en parallèle ; en cas d'échec on continue sans badge.
   useEffect(() => {
@@ -200,20 +142,8 @@ export function TitleView({ id }: { id: string }) {
     [subscriptions],
   );
 
-  const checkedCountries = BATCHES.slice(0, nextBatch).reduce((sum, batch) => sum + batch.length, 0);
-  const missingCountries = TOTAL_COUNTRIES - checkedCountries;
-
   // Date de vérification la plus ancienne parmi les pays reçus.
   const oldestCheck = Object.values(checkedAt).sort()[0];
-
-  // Repart de zéro en ignorant le cache serveur.
-  function refresh() {
-    setOffers([]);
-    setCheckedAt({});
-    setNextBatch(0);
-    nextBatchRef.current = 0;
-    void loadBatches(0, true);
-  }
 
   return (
     <div className="title-page">
@@ -236,14 +166,14 @@ export function TitleView({ id }: { id: string }) {
           <div className={status === "stopped" ? "progress warn" : "progress"} aria-live="polite">
             <span className="progress-text">
               {status === "done" && <CheckCircleIcon aria-hidden="true" />}
-              {status === "loading" && `${checkedCountries} / ${TOTAL_COUNTRIES} pays vérifiés…`}
-              {status === "done" && `${TOTAL_COUNTRIES} / ${TOTAL_COUNTRIES} pays vérifiés`}
+              {status === "loading" && `${checkedCountries} / ${totalCountries} pays vérifiés…`}
+              {status === "done" && `${totalCountries} / ${totalCountries} pays vérifiés`}
               {status === "stopped" &&
-                `${checkedCountries} / ${TOTAL_COUNTRIES} pays vérifiés · ${missingCountries} pays non vérifiés (JustWatch ne répond pas pour le moment)`}
+                `${checkedCountries} / ${totalCountries} pays vérifiés · ${missingCountries} pays non vérifiés (JustWatch ne répond pas pour le moment)`}
             </span>
             {oldestCheck && <span className="progress-note">Données vérifiées {formatCheckedAt(oldestCheck)}</span>}
             {status === "stopped" && (
-              <button type="button" className="progress-retry" onClick={() => void loadBatches(nextBatchRef.current, refreshRef.current)}>
+              <button type="button" className="progress-retry" onClick={retry}>
                 Réessayer
               </button>
             )}
@@ -252,7 +182,7 @@ export function TitleView({ id }: { id: string }) {
               <span className="progress-refresh-label">Actualiser</span>
             </button>
             <div className="progress-bar" aria-hidden="true">
-              <div style={{ width: `${(checkedCountries / TOTAL_COUNTRIES) * 100}%` }} />
+              <div style={{ width: `${(checkedCountries / totalCountries) * 100}%` }} />
             </div>
           </div>
 
