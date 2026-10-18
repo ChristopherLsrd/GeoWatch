@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
-import { JustWatchGraphqlCatalog } from "./JustWatchGraphqlCatalog";
+import { JustWatchGraphqlCatalog, pickAgeRating } from "./JustWatchGraphqlCatalog";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { query: string; variables: Record<string, unknown> }[] = [];
@@ -59,6 +59,8 @@ describe("JustWatchGraphqlCatalog", () => {
           id: "tm92641",
           objectType: "MOVIE",
           content: { title: "Inception", originalReleaseYear: 2010, posterUrl: null, externalIds: { imdbId: "tt1375666", tmdbId: "27205" } },
+          ratingFR: { ageCertification: "" },
+          ratingUS: { ageCertification: "PG-13" },
           details: {
             originalTitle: "Inception",
             shortDescription: " Dom Cobb est un voleur. ",
@@ -77,6 +79,7 @@ describe("JustWatchGraphqlCatalog", () => {
     });
     const title = await new JustWatchGraphqlCatalog({ fetch: fn }).getTitleDetails("tm92641");
     expect(calls[0].variables).toMatchObject({ nodeId: "tm92641", country: "FR", language: "fr" });
+    expect(calls[0].query).toContain("ratingFR: content(country: FR");
     expect(title).toEqual({
       id: "tm92641",
       type: "MOVIE",
@@ -88,6 +91,8 @@ describe("JustWatchGraphqlCatalog", () => {
       originalTitle: "Inception",
       originalLanguage: null,
       trailer: null,
+      ageRating: { country: "US", code: "PG-13" },
+      advisory: null,
       synopsis: "Dom Cobb est un voleur.",
       runtime: 148,
       releaseDate: "2010-07-14",
@@ -102,6 +107,12 @@ describe("JustWatchGraphqlCatalog", () => {
         { name: "Elliot Page", character: null, personId: null },
       ],
     });
+  });
+
+  it("choisit la classification française, sinon américaine", () => {
+    expect(pickAgeRating("12", "PG-13")).toEqual({ country: "FR", code: "12" });
+    expect(pickAgeRating(" ", "PG-13")).toEqual({ country: "US", code: "PG-13" });
+    expect(pickAgeRating(null, undefined)).toBeNull();
   });
 
   it("donne les identifiants des réalisateurs et des acteurs", async () => {

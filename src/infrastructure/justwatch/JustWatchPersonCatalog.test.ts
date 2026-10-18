@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
-import { JustWatchPersonCatalog, offersBatchSize } from "./JustWatchPersonCatalog";
+import { JustWatchPersonCatalog } from "./JustWatchPersonCatalog";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { query: string; variables: Record<string, unknown> }[] = [];
@@ -120,13 +120,6 @@ describe("JustWatchPersonCatalog", () => {
     await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", ["XX" as never]);
     expect(calls).toHaveLength(1);
     expect(calls[0].query).not.toContain("offers(");
-  });
-
-  it("découpe les offres en lots sous la limite de complexité de JustWatch (350 000)", () => {
-    // Mesuré le 2026-10-18 : environ 20 par titre, plus 150 par pays et par titre.
-    expect(offersBatchSize(8) * (20 + 150 * 8)).toBeLessThanOrEqual(300_000);
-    expect(offersBatchSize(8)).toBeGreaterThanOrEqual(200);
-    expect(offersBatchSize(1)).toBeGreaterThanOrEqual(1000);
   });
 
   it("renvoie null pour une personne inconnue", async () => {

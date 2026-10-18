@@ -900,6 +900,26 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
 a.rating:hover { border-color: var(--accent); color: var(--text); }
 .rating strong { font-family: var(--font-mono), ui-monospace, monospace; font-size: 11.5px; letter-spacing: 0.08em; color: var(--accent); }
 .rating-votes { font-size: 13px; font-weight: 400; color: var(--muted); }
+/* Classification d'âge et raisons du guide parental */
+.age-section { display: flex; flex-direction: column; gap: 6px; }
+.age-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.age-rating { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: 15px; font-weight: 700; text-decoration: none; }
+a.age-rating:hover, a.age-rating:focus-visible { border-color: var(--accent); color: var(--text); }
+.advisory-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.advisory-list li { padding: 0; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
+.advisory-list li a, .advisory-list li > span { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 10px; color: inherit; text-decoration: none; }
+.advisory-list li:hover { border-color: var(--accent); }
+.advisory-list li[data-severity="moderate"] { background: var(--accent-soft); border-color: var(--border-strong); }
+.advisory-list li[data-severity="severe"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.advisory-toggle { display: none; }
+.advisory-source { margin: 0; font-size: 12px; color: var(--faint); }
+.advisory-source a { color: inherit; }
+@media (max-width: 600px) {
+  .age-row { align-items: flex-start; }
+  /* Mobile : au-delà de la 2e, les raisons sont repliées derrière « Voir tout ». */
+  .advisory-list:not(.is-expanded) .advisory-extra { display: none; }
+  button.ghost.advisory-toggle { display: inline-flex; align-items: center; min-height: 32px; padding: 0 4px; border: 0; }
+}
 .synopsis { max-width: 66ch; }
 .synopsis p { margin: 0; font-size: 16px; line-height: 1.6; color: #dcd8d0; }
 .credits { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 18px; margin: 0; font-size: 14px; }
@@ -994,4 +1014,29 @@ button.ghost.person-tab:hover:not(:disabled) { border-color: transparent transpa
 button.ghost.person-tab[aria-selected="true"], button.ghost.person-tab[aria-selected="true"]:hover:not(:disabled) { color: var(--text); border-bottom-color: var(--accent); }
 @media (max-width: 767px) {
   .person-head { flex-direction: column; }
+}
+
+/* Page d'une classification */
+.rating-head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.rating-head h1, .rating-head p { margin: 0; }
+.rating-note { font-size: 13px; }
+.rating-codes { display: flex; gap: 6px; max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
+.rating-codes a { flex: none; display: inline-flex; align-items: center; min-height: 24px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rating-codes a:hover { border-color: var(--accent); color: var(--text); }
+.rating-codes a.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.rating-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 22px; }
+.rating-filters input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.rating-filters select { max-width: 100%; }
+.rating-filters-toggle { display: none; }
+.rating-years { display: flex; gap: 6px; }
+.rating-years input { width: 92px; height: 48px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--field); }
+.rating-years input:focus { border-color: var(--accent); outline: none; }
+.rating-home { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); cursor: pointer; }
+.rating-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.rating-more { display: flex; justify-content: center; margin-top: 24px; }
+@media (max-width: 600px) {
+  button.ghost.rating-filters-toggle { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; margin-bottom: 10px; border: 0; color: var(--accent); font-weight: 600; }
+  .rating-filters:not(.is-open) { display: none; } /* champs gardés montés : la saisie survit au repli */
+  .rating-filters > * { flex: 1 1 100%; }
+  .rating-years input { flex: 1 1 0; width: auto; min-width: 0; }
 }

@@ -5,9 +5,9 @@
 import { JUSTWATCH_COUNTRIES } from "@/config/countries";
 import { isCountryCode, type CountryCode } from "@/domain/Country";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
-import type { FilmographyEntry } from "@/domain/Person";
 import type { CatalogPerson, PersonCatalog, RawFilmography } from "@/domain/ports/PersonCatalog";
 import { imageUrl, JustWatchClient } from "./JustWatchClient";
+import { CARD_CONTENT_FIELDS, flatrateOffers, toCardEntry, type JustWatchCardTitle } from "./titleCards";
 
 const LIST_COUNTRIES = ["FR", "US"] as const;
 const LIST_SIZE = 100;
@@ -17,37 +17,13 @@ const LISTS = [
   { key: "ALL", filter: "$allFilter" },
 ] as const;
 
-// JustWatch refuse une requête de complexité supérieure à 350 000. Mesure du 2026-10-18 pour la requête
-// des offres : environ 20 par titre, plus 150 par pays et par titre. On garde une marge.
-const OFFERS_COMPLEXITY_BUDGET = 300_000;
-
-export function offersBatchSize(countryCount: number): number {
-  return Math.max(1, Math.floor(OFFERS_COMPLEXITY_BUDGET / (20 + 150 * countryCount)));
-}
-
-type FlatrateOffers = { package: { packageId: number } }[] | null | undefined;
-
-type JustWatchPersonTitle = {
-  id: string;
-  objectType: string;
-  content: {
-    title: string;
-    originalTitle: string | null;
-    originalReleaseYear: number | null;
-    runtime: number | null;
-    posterUrl: string | null;
-    externalIds: { imdbId: string | null; tmdbId: string | null } | null;
-    scoring: { imdbScore: number | null; tmdbScore: number | null } | null;
-  } | null;
-};
-
 type PersonResponse = {
   node: {
     id: string;
     fr?: { fullName: string; portraitUrl: string | null; dateOfBirth: string | null; shortDescription: string | null } | null;
     en?: { shortDescription: string | null } | null;
   } | null;
-} & Record<string, { edges: { node: JustWatchPersonTitle }[] } | null>;
+} & Record<string, { edges: { node: JustWatchCardTitle }[] } | null>;
 
 export class JustWatchPersonCatalog implements PersonCatalog {
   private readonly client: JustWatchClient;
@@ -89,11 +65,12 @@ export class JustWatchPersonCatalog implements PersonCatalog {
     };
     const list = (key: string) =>
       LIST_COUNTRIES.flatMap((c) => data[`${key}_${c}`]?.edges ?? [])
-        .map((edge) => toEntry(edge.node))
+        .map((edge) => toCardEntry(edge.node))
         .filter((entry) => entry !== null);
     const filmography: RawFilmography = { DIRECTOR: list("DIRECTOR"), ACTOR: list("ACTOR"), ALL: list("ALL") };
 
-    const offers = await this.flatrateOffers(
+    const offers = await flatrateOffers(
+      this.client,
       [...new Set([...filmography.DIRECTOR, ...filmography.ACTOR, ...filmography.ALL].map((e) => e.id))],
       countries,
     );
@@ -101,38 +78,6 @@ export class JustWatchPersonCatalog implements PersonCatalog {
       entry.flatrate = offers.get(entry.id) ?? Object.fromEntries(countries.map((code) => [code, []]));
     }
     return { person, filmography };
-  }
-
-  // Plateformes en abonnement par titre et par pays, en lots qui restent sous la limite de complexité.
-  private async flatrateOffers(titleIds: string[], countries: CountryCode[]): Promise<Map<string, FilmographyEntry["flatrate"]>> {
-    const result = new Map<string, FilmographyEntry["flatrate"]>();
-    if (countries.length === 0) return result;
-    const offers = countries
-      .map((code) => `flatrate_${code}: offers(country: ${code}, platform: WEB, filter: { monetizationTypes: [FLATRATE] }) { package { packageId } }`)
-      .join("\n");
-    const size = offersBatchSize(countries.length);
-    for (let start = 0; start < titleIds.length; start += size) {
-      const batch = titleIds.slice(start, start + size);
-      const query = `
-query GetPersonOffers(${batch.map((_, i) => `$id${i}: ID!`).join(", ")}) {
-  ${batch.map((_, i) => `t${i}: node(id: $id${i}) { ... on MovieOrShow { ${offers} } }`).join("\n  ")}
-}`;
-      const data = await this.client.post<Record<string, Record<string, FlatrateOffers> | null>>({
-        operationName: "GetPersonOffers",
-        variables: Object.fromEntries(batch.map((id, i) => [`id${i}`, id])),
-        query,
-      });
-      batch.forEach((id, i) => {
-        const node = data[`t${i}`];
-        result.set(
-          id,
-          Object.fromEntries(
-            countries.map((code) => [code, [...new Set((node?.[`flatrate_${code}`] ?? []).map((o) => String(o.package.packageId)))]]),
-          ),
-        );
-      });
-    }
-    return result;
   }
 }
 
@@ -144,14 +89,7 @@ const PERSON_QUERY = (() => {
     edges { node {
       id
       objectType
-      content(country: ${country}, language: "fr") {
-        title
-        originalTitle
-        originalReleaseYear
-        runtime
-        posterUrl(profile: S332, format: JPG)
-        externalIds { imdbId tmdbId }
-        scoring { imdbScore tmdbScore }
+      content(country: ${country}, language: "fr") {${CARD_CONTENT_FIELDS}
       }
     } }
   }`,
@@ -169,23 +107,3 @@ query GetPerson($nodeId: ID!, $directorFilter: TitleFilter!, $actorFilter: Title
   ${lists}
 }`;
 })();
-
-// Les plateformes en abonnement sont ajoutées ensuite (flatrateOffers).
-function toEntry(node: JustWatchPersonTitle): FilmographyEntry | null {
-  if ((node.objectType !== "MOVIE" && node.objectType !== "SHOW") || !node.content) return null;
-  const { content } = node;
-  return {
-    id: node.id,
-    type: node.objectType,
-    name: content.title,
-    originalTitle: content.originalTitle || null,
-    year: content.originalReleaseYear ?? null,
-    posterUrl: imageUrl(content.posterUrl),
-    imdbId: content.externalIds?.imdbId ?? null,
-    tmdbId: content.externalIds?.tmdbId ?? null,
-    runtime: content.runtime || null,
-    imdbScore: content.scoring?.imdbScore ?? null,
-    tmdbScore: content.scoring?.tmdbScore ?? null,
-    flatrate: {},
-  };
-}

@@ -8,17 +8,21 @@ import { DailyCheck } from "@/application/daily/DailyCheck";
 import { GetPerson } from "@/application/people/GetPerson";
 import { ImportLetterboxd } from "@/application/import/ImportLetterboxd";
 import { SearchHistory } from "@/application/history/SearchHistory";
+import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
 import { Watchlist } from "@/application/watchlist/Watchlist";
 import { WatchlistCheck } from "@/application/watchlist/WatchlistCheck";
 import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
+import { ImdbParentsGuide } from "./imdb/ImdbParentsGuide";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
+import { JustWatchRatingCatalog } from "./justwatch/JustWatchRatingCatalog";
 import { JustWatchPersonCatalog } from "./justwatch/JustWatchPersonCatalog";
 import { getDb } from "./mongo/client";
 import { TmdbTitleExtras } from "./tmdb/TmdbTitleExtras";
 import { TmdbPersonSource } from "./tmdb/TmdbPersonSource";
 import { WikipediaPersonSource } from "./wikipedia/WikipediaPersonSource";
+import { CachedContentAdvisories } from "./mongo/CachedContentAdvisories";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
 import { MongoAvailabilityCache } from "./mongo/MongoAvailabilityCache";
 import { MongoPersonCache } from "./mongo/MongoPersonCache";
@@ -42,7 +46,14 @@ export const getPerson = new GetPerson(
 );
 
 export const searchTitles = new SearchTitles(catalog);
-export const getTitle = new GetTitle(catalog, new TmdbTitleExtras({ apiKey: process.env.TMDB_API_KEY }));
+export const contentAdvisories = new CachedContentAdvisories(new ImdbParentsGuide(), getDb);
+export const getTitle = new GetTitle(
+  catalog,
+  new TmdbTitleExtras({ apiKey: process.env.TMDB_API_KEY }),
+  contentAdvisories,
+);
+export const ratingCatalog = new JustWatchRatingCatalog();
+export const listRatedTitles = new ListRatedTitles(ratingCatalog, contentAdvisories, subscriptionRepository);
 export const getTitleAvailability = new GetTitleAvailability(catalog, availabilityCache);
 export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const importLetterboxd = new ImportLetterboxd(catalog, watchlist);

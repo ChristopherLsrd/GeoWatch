@@ -4,7 +4,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export type TimingKey = "mongo" | "justwatch";
+export type TimingKey = "mongo" | "justwatch" | "imdb";
 
 const storage = new AsyncLocalStorage<Record<TimingKey, number>>();
 
@@ -25,7 +25,7 @@ export async function measure<T>(key: TimingKey, fn: () => Promise<T>): Promise<
 export async function runWithTiming<T>(
   fn: () => Promise<T>,
 ): Promise<{ result: T; timings: Record<TimingKey, number>; totalMs: number }> {
-  const timings: Record<TimingKey, number> = { mongo: 0, justwatch: 0 };
+  const timings: Record<TimingKey, number> = { mongo: 0, justwatch: 0, imdb: 0 };
   const start = performance.now();
   const result = await storage.run(timings, fn);
   return { result, timings, totalMs: performance.now() - start };
@@ -35,6 +35,7 @@ export function serverTimingHeader(timings: Record<TimingKey, number>, totalMs: 
   return [
     `mongo;dur=${timings.mongo.toFixed(1)}`,
     `justwatch;dur=${timings.justwatch.toFixed(1)}`,
+    `imdb;dur=${timings.imdb.toFixed(1)}`,
     `total;dur=${totalMs.toFixed(1)}`,
   ].join(", ");
 }

@@ -9,6 +9,7 @@ import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
 import { languageName } from "@/domain/Language";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
+import { AgeRatingSection } from "./AgeRatingSection";
 import { apiFetch } from "./apiFetch";
 import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
@@ -271,6 +272,7 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
               </Fragment>
             ))}
           </p>
+          <AgeRatingSection ageRating={title.ageRating ?? null} advisory={title.advisory ?? null} type={title.type} imdbId={title.imdbId} />
           <div className="ratings">
             {pills.map((pill) => {
               const content = (
