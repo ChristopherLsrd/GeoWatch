@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { FilmographyEntry } from "@/domain/Person";
 import type { CachedPerson, PersonCache } from "@/domain/ports/PersonCache";
 import type { CatalogPerson, PersonCatalog, RawFilmography } from "@/domain/ports/PersonCatalog";
@@ -16,7 +16,7 @@ function entry(id: string, flatrate: FilmographyEntry["flatrate"] = {}): Filmogr
 
 const base: CatalogPerson = { id: "tp1725", name: "Christopher Nolan", birthDate: "1970-07-30", photoUrl: null, biographyFr: "Bio FR", biographyEn: "Bio EN" };
 
-function setup(options: { subscriptions?: Subscription[]; cached?: CachedPerson | null; found?: boolean } = {}) {
+function setup(options: { subscriptions?: Subscription[]; cached?: CachedPerson | null; found?: boolean; failFind?: boolean; failSave?: boolean } = {}) {
   const catalogCalls: { id: string; countries: string[] }[] = [];
   const saved: CachedPerson[] = [];
   const raw: RawFilmography = { DIRECTOR: [entry("tm1", { FR: ["8"] })], ACTOR: [], ALL: [entry("tm1"), entry("tm2")] };
@@ -28,9 +28,11 @@ function setup(options: { subscriptions?: Subscription[]; cached?: CachedPerson 
   };
   const cache: PersonCache = {
     async find(id, day) {
+      if (options.failFind) throw new Error("mongo");
       return options.cached && id === options.cached.person.id && day === "2026-10-18" ? options.cached : null;
     },
     async save(e) {
+      if (options.failSave) throw new Error("mongo");
       saved.push(e);
     },
   };
@@ -93,5 +95,22 @@ describe("GetPerson", () => {
     const invalid = setup();
     expect(await invalid.useCase.execute("tm92641")).toBeNull();
     expect(invalid.catalogCalls).toHaveLength(0);
+  });
+
+  it("renvoie la page même si l'écriture du cache échoue", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { useCase } = setup({ failSave: true });
+    const page = await useCase.execute("tp1725");
+    expect(page?.person.name).toBe("Christopher Nolan");
+    spy.mockRestore();
+  });
+
+  it("interroge le catalogue si la lecture du cache échoue", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { useCase, catalogCalls } = setup({ failFind: true });
+    const page = await useCase.execute("tp1725");
+    expect(catalogCalls).toHaveLength(1);
+    expect(page?.person.name).toBe("Christopher Nolan");
+    spy.mockRestore();
   });
 });

@@ -28,7 +28,11 @@ export class GetPerson {
     const countries = [...new Set(subscriptions.map((s) => s.country))];
     const now = this.now();
 
-    let entry: CachedPerson | null = await this.cache.find(personId, parisDay(now));
+    // Une panne du cache ne doit pas faire échouer la page : on le traite comme vide.
+    let entry: CachedPerson | null = await this.cache.find(personId, parisDay(now)).catch((error) => {
+      console.error("PersonCache.find a échoué", error);
+      return null;
+    });
     if (!entry || !countries.every((c) => entry!.flatrateCountries.includes(c))) {
       const fetched = await this.catalog.getPerson(personId, countries);
       if (!fetched) return null;
@@ -38,7 +42,9 @@ export class GetPerson {
         .map(({ type, tmdbId }) => ({ type, tmdbId }));
       const person = await resolvePerson(fetched.person, { name: fetched.person.name, titles }, this.sources);
       entry = { person, filmography, flatrateCountries: countries, fetchedAt: now };
-      await this.cache.save(entry);
+      await this.cache.save(entry).catch((error) => {
+        console.error("PersonCache.save a échoué", error);
+      });
     }
     return { person: entry.person, filmography: toCards(entry.filmography, subscriptions) };
   }
