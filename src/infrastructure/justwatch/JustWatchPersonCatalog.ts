@@ -3,6 +3,7 @@
 
 import { JUSTWATCH_COUNTRIES } from "@/config/countries";
 import { isCountryCode, type CountryCode } from "@/domain/Country";
+import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
 import type { FilmographyEntry } from "@/domain/Person";
 import type { CatalogPerson, PersonCatalog, RawFilmography } from "@/domain/ports/PersonCatalog";
 import { imageUrl, JustWatchClient } from "./JustWatchClient";
@@ -58,9 +59,13 @@ export class JustWatchPersonCatalog implements PersonCatalog {
       },
       query: personQuery(countries),
     });
-    // Identifiant inconnu : JustWatch renvoie une erreur et un nœud nul. Toute autre erreur est un échec.
-    if (!data.node) return null;
-    if (errors) throw new Error(`Réponse JustWatch inattendue : ${JSON.stringify(errors).slice(0, 300)}`);
+    // Identifiant inconnu : JustWatch renvoie un nœud nul avec l'erreur « no merge target found ».
+    // Toute autre erreur (même avec un nœud nul) est un échec passager : la page propose « Réessayer ».
+    const unknownId = !errors || errors.every((e) => String((e as { message?: unknown })?.message ?? "").includes("no merge target found"));
+    if (!data.node && unknownId) return null;
+    if (errors || !data.node) {
+      throw new CatalogUnavailableError(`Réponse JustWatch inattendue : ${JSON.stringify(errors).slice(0, 300)}`);
+    }
     const content = data.node.fr;
     if (!content?.fullName) return null;
 

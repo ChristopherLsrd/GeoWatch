@@ -52,8 +52,14 @@ export function PersonView({ id, initialRole }: { id: string; initialRole?: stri
     (async () => {
       try {
         const response = await apiFetch(`/api/people/${encodeURIComponent(id)}`, controller.signal);
-        if (response.status === 404) return setState({ kind: "not_found" });
-        if (response.status === 503) return setState({ kind: "unavailable" });
+        if (response.status === 404) {
+          if (!controller.signal.aborted) setState({ kind: "not_found" });
+          return;
+        }
+        if (response.status === 503) {
+          if (!controller.signal.aborted) setState({ kind: "unavailable" });
+          return;
+        }
         if (!response.ok) throw new Error(String(response.status));
         const body = (await response.json()) as { person: Person; filmography: Filmography };
         if (!controller.signal.aborted) setState({ kind: "ready", person: body.person, filmography: body.filmography });

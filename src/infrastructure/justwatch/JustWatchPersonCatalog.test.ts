@@ -120,6 +120,14 @@ describe("JustWatchPersonCatalog", () => {
     expect(await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp999999999", [])).toBeNull();
   });
 
+  it("lève CatalogUnavailableError quand le nœud est nul avec une autre erreur", async () => {
+    const { fn } = fakeFetch(200, {
+      errors: [{ message: "internal failure", extensions: { code: "INTERNAL_ERROR" } }],
+      data: { node: null, DIRECTOR_FR: emptyList, DIRECTOR_US: emptyList, ACTOR_FR: emptyList, ACTOR_US: emptyList, ALL_FR: emptyList, ALL_US: emptyList },
+    });
+    await expect(new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", [])).rejects.toBeInstanceOf(CatalogUnavailableError);
+  });
+
   it("signale les autres erreurs GraphQL", async () => {
     const { fn } = fakeFetch(200, { errors: [{ message: "Cannot query field" }], data: null });
     await expect(new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", [])).rejects.toThrow(/inattendue/);
