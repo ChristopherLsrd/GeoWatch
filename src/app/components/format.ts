@@ -20,3 +20,25 @@ export function yearWithRuntime(year: number | null | undefined, runtime: number
   if (runtime) parts.push(`(${formatRuntime(runtime)})`);
   return parts.join(" ");
 }
+
+const longDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+// « 1970-07-30 » → « 30 juillet 1970 » (date sans heure, lue en UTC pour éviter tout décalage).
+function formatIsoDate(iso: string): string {
+  return longDate.format(new Date(`${iso}T00:00:00Z`));
+}
+
+function ageAt(birth: string, at: Date): number {
+  const b = new Date(`${birth}T00:00:00Z`);
+  let age = at.getUTCFullYear() - b.getUTCFullYear();
+  const before = at.getUTCMonth() < b.getUTCMonth() || (at.getUTCMonth() === b.getUTCMonth() && at.getUTCDate() < b.getUTCDate());
+  if (before) age -= 1;
+  return age;
+}
+
+// « Naissance : 30 juillet 1970 (56 ans) » ou « 31 mai 1930 – 2 août 2020 (90 ans) ».
+export function formatLifeDates(birthDate: string | null, deathDate: string | null, today: Date): string {
+  if (!birthDate) return "";
+  if (deathDate) return `${formatIsoDate(birthDate)} – ${formatIsoDate(deathDate)} (${ageAt(birthDate, new Date(`${deathDate}T00:00:00Z`))} ans)`;
+  return `Naissance : ${formatIsoDate(birthDate)} (${ageAt(birthDate, today)} ans)`;
+}

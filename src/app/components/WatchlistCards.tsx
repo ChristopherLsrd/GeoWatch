@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { BookmarkIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
 import { yearWithRuntime } from "./format";
-import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
-import { PosterScores } from "./PosterScores";
+import { directorsLabel, type OverviewItem } from "./HomeBadge";
+import { TitleCard } from "./TitleCard";
 import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 
 type CardItem = OverviewItem;
@@ -69,32 +69,15 @@ export function WatchlistCards() {
                 const yearLabel = yearWithRuntime(title.year, item.details?.runtime);
                 return (
                   <li key={title.id}>
-                    <Link
-                      href={`/titre/${encodeURIComponent(title.id)}`}
-                      className="card"
-                    >
-                      <span className="card-media">
-                        {title.posterUrl ? (
-                          <img
-                            className="card-poster"
-                            src={title.posterUrl}
-                            alt=""
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="card-poster" />
-                        )}
-                        <HomeBadge item={item} />
-                        <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} />
-                      </span>
-                      <span className="card-title">{title.name}</span>
-                      {yearLabel && <span className="card-meta">{yearLabel}</span>}
-                      {director && (
-                        <span className="card-meta" title={director}>
-                          {director}
-                        </span>
-                      )}
-                    </Link>
+                    <TitleCard
+                      id={title.id}
+                      name={title.name}
+                      posterUrl={title.posterUrl}
+                      meta={[yearLabel, director]}
+                      availableAtHome={item.availableAtHome}
+                      imdbScore={item.details?.imdbScore}
+                      tmdbScore={item.details?.tmdbScore}
+                    />
                   </li>
                 );
               })}
