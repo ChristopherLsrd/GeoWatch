@@ -28,6 +28,7 @@ function setup(initial: WatchStatus[], check: (id: string) => WatchStatus | Erro
   const repository: WatchStatusRepository = {
     get: async (id) => statuses.get(id) ?? null,
     getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
+    list: async () => [...statuses.values()],
     save: async (s) => void statuses.set(s.titleId, s),
   };
   const overview = new WatchlistOverview(
