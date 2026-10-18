@@ -911,10 +911,14 @@ a.age-rating:hover, a.age-rating:focus-visible { border-color: var(--accent); co
 .advisory-list li:hover { border-color: var(--accent); }
 .advisory-list li[data-severity="moderate"] { background: var(--accent-soft); border-color: var(--border-strong); }
 .advisory-list li[data-severity="severe"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.advisory-toggle { display: none; }
 .advisory-source { margin: 0; font-size: 12px; color: var(--faint); }
 .advisory-source a { color: inherit; }
 @media (max-width: 600px) {
   .age-row { align-items: flex-start; }
+  /* Mobile : au-delà de la 2e, les raisons sont repliées derrière « Voir tout ». */
+  .advisory-list:not(.is-expanded) .advisory-extra { display: none; }
+  button.ghost.advisory-toggle { display: inline-flex; align-items: center; min-height: 32px; padding: 0 4px; border: 0; }
 }
 .synopsis { max-width: 66ch; }
 .synopsis p { margin: 0; font-size: 16px; line-height: 1.6; color: #dcd8d0; }

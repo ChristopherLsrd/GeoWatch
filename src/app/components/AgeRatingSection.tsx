@@ -1,3 +1,6 @@
+"use client";
+
+import { useId, useState } from "react";
 import Link from "next/link";
 import { isKnownAgeRating } from "@/config/ageRatings";
 import { ADVISORY_CATEGORIES, type ContentAdvisory } from "@/domain/ContentAdvisory";
@@ -5,6 +8,9 @@ import { countryFlag, countryName } from "@/domain/Country";
 import type { TitleType } from "@/domain/Title";
 import type { AgeRating } from "@/domain/TitleDetails";
 import { ADVISORY_LABELS, SEVERITY_LABELS, ratingHref } from "./advisoryLabels";
+
+// Nombre de raisons visibles sur mobile avant « Voir tout ».
+const COLLAPSED_COUNT = 2;
 
 // Pastille de classification d'âge et raisons du guide parental, cliquables vers la liste des titres classés pareil.
 export function AgeRatingSection({
@@ -18,6 +24,9 @@ export function AgeRatingSection({
   type: TitleType;
   imdbId: string | null;
 }) {
+  const listId = useId();
+  // Mobile : seules les 2 premières raisons sont visibles tant que la liste n'est pas dépliée.
+  const [expanded, setExpanded] = useState(false);
   if (!ageRating && !advisory) return null;
 
   const clickable = !!ageRating && isKnownAgeRating(ageRating.country, ageRating.code);
@@ -51,12 +60,12 @@ export function AgeRatingSection({
       <div className="age-row">
         {pill}
         {reasons.length > 0 && (
-          <ul className="advisory-list">
-            {reasons.map((c) => {
+          <ul id={listId} className={`advisory-list${expanded ? " is-expanded" : ""}`}>
+            {reasons.map((c, i) => {
               const severity = advisory![c]!;
               const label = `${ADVISORY_LABELS[c]} : ${SEVERITY_LABELS[severity]}`;
               return (
-                <li key={c} data-severity={severity}>
+                <li key={c} data-severity={severity} className={i >= COLLAPSED_COUNT ? "advisory-extra" : undefined}>
                   {clickable ? (
                     <Link href={ratingHref(ageRating!.country, ageRating!.code, { ...typeFilter, advisory: { [c]: severity } })}>
                       {label}
@@ -68,6 +77,17 @@ export function AgeRatingSection({
               );
             })}
           </ul>
+        )}
+        {reasons.length > COLLAPSED_COUNT && (
+          <button
+            type="button"
+            className="ghost link-accent advisory-toggle"
+            aria-expanded={expanded}
+            aria-controls={listId}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Réduire" : `Voir tout (${reasons.length})`}
+          </button>
         )}
       </div>
       {reasons.length > 0 && (
