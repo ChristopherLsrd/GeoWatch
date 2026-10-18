@@ -48,7 +48,7 @@ export class JustWatchPersonCatalog implements PersonCatalog {
   async getPerson(personId: string, flatrateCountries: CountryCode[]) {
     // isCountryCode ne vérifie que la forme (« XX » passe) : on garde les seuls pays couverts par JustWatch.
     const countries = flatrateCountries.filter((code) => isCountryCode(code) && JUSTWATCH_COUNTRIES.includes(code));
-    const data = await this.client.post<PersonResponse>({
+    const { data, errors } = await this.client.postAllowingErrors<PersonResponse>({
       operationName: "GetPerson",
       variables: {
         nodeId: personId,
@@ -58,7 +58,10 @@ export class JustWatchPersonCatalog implements PersonCatalog {
       },
       query: personQuery(countries),
     });
-    const content = data.node?.fr;
+    // Identifiant inconnu : JustWatch renvoie une erreur et un nœud nul. Toute autre erreur est un échec.
+    if (!data.node) return null;
+    if (errors) throw new Error(`Réponse JustWatch inattendue : ${JSON.stringify(errors).slice(0, 300)}`);
+    const content = data.node.fr;
     if (!content?.fullName) return null;
 
     const person: CatalogPerson = {

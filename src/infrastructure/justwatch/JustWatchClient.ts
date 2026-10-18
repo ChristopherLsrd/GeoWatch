@@ -17,10 +17,24 @@ export class JustWatchClient {
   constructor(private readonly fetchFn: typeof fetch = fetch) {}
 
   post<T>(body: object): Promise<T> {
-    return measure("justwatch", () => this.send<T>(body));
+    return measure("justwatch", async () => {
+      const json = await this.send(body);
+      if (json.errors) throw unexpected(200, json.errors);
+      return json.data as T;
+    });
   }
 
-  private async send<T>(body: object): Promise<T> {
+  // Comme post, mais renvoie aussi les erreurs GraphQL quand des données les accompagnent :
+  // un identifiant inconnu donne une erreur et un nœud nul, à traiter comme « introuvable ».
+  postAllowingErrors<T>(body: object): Promise<{ data: T; errors: unknown[] | null }> {
+    return measure("justwatch", async () => {
+      const json = await this.send(body);
+      if (json.errors && !json.data) throw unexpected(200, json.errors);
+      return { data: json.data as T, errors: json.errors ?? null };
+    });
+  }
+
+  private async send(body: object): Promise<{ data?: unknown; errors?: unknown[] }> {
     let response: Response;
     try {
       response = await this.fetchFn(GRAPHQL_URL, {
@@ -38,9 +52,11 @@ export class JustWatchClient {
       throw new CatalogUnavailableError(`JustWatch a répondu ${response.status}`);
     }
     const json = await response.json().catch(() => null);
-    if (!response.ok || !json || json.errors) {
-      throw new Error(`Réponse JustWatch inattendue (${response.status}) : ${JSON.stringify(json?.errors ?? json).slice(0, 300)}`);
-    }
-    return json.data as T;
+    if (!response.ok || !json) throw unexpected(response.status, json);
+    return json;
   }
+}
+
+function unexpected(status: number, detail: unknown): Error {
+  return new Error(`Réponse JustWatch inattendue (${status}) : ${JSON.stringify(detail).slice(0, 300)}`);
 }

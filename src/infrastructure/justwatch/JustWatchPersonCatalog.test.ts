@@ -106,6 +106,25 @@ describe("JustWatchPersonCatalog", () => {
     expect(await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp999", [])).toBeNull();
   });
 
+  it("renvoie null quand JustWatch ne trouve pas l'identifiant (réponse réelle du 2026-10-18)", async () => {
+    const { fn } = fakeFetch(200, {
+      errors: [
+        {
+          message: "resolver.findMergedTitle: no merge target found for tp999999999",
+          path: ["node", "content"],
+          extensions: { code: "INTERNAL_ERROR" },
+        },
+      ],
+      data: { node: null, DIRECTOR_FR: emptyList, DIRECTOR_US: emptyList, ACTOR_FR: emptyList, ACTOR_US: emptyList, ALL_FR: emptyList, ALL_US: emptyList },
+    });
+    expect(await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp999999999", [])).toBeNull();
+  });
+
+  it("signale les autres erreurs GraphQL", async () => {
+    const { fn } = fakeFetch(200, { errors: [{ message: "Cannot query field" }], data: null });
+    await expect(new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", [])).rejects.toThrow(/inattendue/);
+  });
+
   it("signale une limitation de JustWatch", async () => {
     const { fn } = fakeFetch(429, {});
     await expect(new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", [])).rejects.toBeInstanceOf(CatalogUnavailableError);
