@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BookmarkIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { apiFetch } from "./apiFetch";
@@ -13,7 +13,7 @@ type State =
   | { kind: "error" };
 
 // Bouton « Ajouter à ma liste » / « Retirer de ma liste » et note perso, sur la page titre.
-export function WatchlistButton({ titleId }: { titleId: string }) {
+export function WatchlistButton({ titleId, extraAction }: { titleId: string; extraAction?: ReactNode }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -40,8 +40,15 @@ export function WatchlistButton({ titleId }: { titleId: string }) {
     return () => controller.abort();
   }, [titleId]);
 
-  if (state.kind === "loading") return null;
-  if (state.kind === "error") return <p className="muted">Ma liste est indisponible pour le moment.</p>;
+  if (state.kind === "loading") return extraAction ? <div className="title-actions">{extraAction}</div> : null;
+  if (state.kind === "error") {
+    return (
+      <div className="watchlist-box">
+        {extraAction && <div className="title-actions">{extraAction}</div>}
+        <p className="muted">Ma liste est indisponible pour le moment.</p>
+      </div>
+    );
+  }
 
   async function add() {
     setBusy(true);
@@ -95,6 +102,7 @@ export function WatchlistButton({ titleId }: { titleId: string }) {
             Ajouter à ma liste
           </button>
         )}
+        {extraAction}
         {state.inList && (
           <button
             type="button"

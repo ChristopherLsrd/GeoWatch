@@ -87,6 +87,7 @@ describe("JustWatchGraphqlCatalog", () => {
       tmdbId: "27205",
       originalTitle: "Inception",
       originalLanguage: null,
+      trailer: null,
       synopsis: "Dom Cobb est un voleur.",
       runtime: 148,
       releaseDate: "2010-07-14",

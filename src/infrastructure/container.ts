@@ -16,7 +16,7 @@ import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
 import { JustWatchPersonCatalog } from "./justwatch/JustWatchPersonCatalog";
 import { getDb } from "./mongo/client";
-import { TmdbOriginalLanguage } from "./tmdb/TmdbOriginalLanguage";
+import { TmdbTitleExtras } from "./tmdb/TmdbTitleExtras";
 import { TmdbPersonSource } from "./tmdb/TmdbPersonSource";
 import { WikipediaPersonSource } from "./wikipedia/WikipediaPersonSource";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
@@ -42,7 +42,7 @@ export const getPerson = new GetPerson(
 );
 
 export const searchTitles = new SearchTitles(catalog);
-export const getTitle = new GetTitle(catalog, new TmdbOriginalLanguage({ apiKey: process.env.TMDB_API_KEY }));
+export const getTitle = new GetTitle(catalog, new TmdbTitleExtras({ apiKey: process.env.TMDB_API_KEY }));
 export const getTitleAvailability = new GetTitleAvailability(catalog, availabilityCache);
 export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const importLetterboxd = new ImportLetterboxd(catalog, watchlist);
