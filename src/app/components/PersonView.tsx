@@ -7,14 +7,8 @@ import { ArrowLeftIcon, UserIcon } from "@heroicons/react/24/outline";
 import type { BiographySource, FilmographyCard, Person, PersonRole } from "@/domain/Person";
 import { apiFetch } from "./apiFetch";
 import { formatLifeDates, yearWithRuntime } from "./format";
+import { ROLE_PARAMS } from "./personRoles";
 import { TitleCard } from "./TitleCard";
-
-// Valeur du paramètre d'URL `role` pour chaque onglet.
-export const ROLE_PARAMS: Record<PersonRole, string> = {
-  DIRECTOR: "realisation",
-  ACTOR: "interpretation",
-  OTHER: "autres",
-};
 
 const ROLE_LABELS: Record<PersonRole, string> = {
   DIRECTOR: "Réalisation",

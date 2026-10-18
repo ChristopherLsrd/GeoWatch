@@ -14,7 +14,7 @@ import type { TitleDetails } from "@/domain/TitleDetails";
 import { apiFetch } from "./apiFetch";
 import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
-import { ROLE_PARAMS } from "./PersonView";
+import { ROLE_PARAMS } from "./personRoles";
 import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
 

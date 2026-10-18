@@ -5,7 +5,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import type { Title } from "@/domain/Title";
 import { ClockIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { apiFetch } from "./apiFetch";
-import { ROLE_PARAMS } from "./PersonView";
+import { ROLE_PARAMS } from "./personRoles";
 
 type State =
   | { kind: "idle" }
