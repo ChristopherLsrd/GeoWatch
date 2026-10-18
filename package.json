@@ -13,7 +13,7 @@
     "url": "git+https://github.com/ChristopherLsrd/GeoWatch.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/ChristopherLsrd/GeoWatch/issues"

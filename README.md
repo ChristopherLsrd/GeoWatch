@@ -23,7 +23,8 @@ Application à un seul utilisateur, protégée par mot de passe, déployée sur 
 ## Sources de données
 
 - **API GraphQL non officielle de JustWatch** : titres, offres par pays, langues audio et sous-titres. Elle n'est pas documentée, peut changer sans préavis, et n'est tolérée que pour un usage privé et non commercial. Les appels se font uniquement côté serveur. Les disponibilités sont mises en cache pour la journée (heure de Paris) afin de limiter le volume de requêtes.
-- **TMDB** (facultatif) : langue originale des titres, pour la préférence « Version originale ».
+- **TMDB** (facultatif) : langue originale des titres, pour la préférence « Version originale », et biographie et photo des personnes.
+- **Wikipédia** (en français) : biographie et photo des personnes quand JustWatch et TMDB n'en ont pas.
 
 Les drapeaux des pays viennent de la police TwemojiCountryFlags (projet [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill), graphismes [Twemoji](https://github.com/jdecked/twemoji) sous licence CC-BY 4.0), intégrée à l'application parce que Windows n'affiche pas les emoji de drapeaux.
 
@@ -97,3 +98,15 @@ Le projet est relié à Vercel par l'intégration Git :
 
 La branche `main` est protégée : toute modification passe par une pull request. Les variables d'environnement sont définies dans Vercel, en Production et en Preview. Le cron quotidien ne tourne que sur la production. On peut aussi le lancer à la main depuis le tableau de bord Vercel (Settings → Cron Jobs).
 
+## Licence et crédits
+
+Le code de GeoWatch est distribué sous licence [MIT](LICENSE).
+
+Cette licence ne couvre que le code. Les données et les images affichées restent soumises aux conditions de leurs sources :
+
+- **JustWatch** : titres, offres et langues ([justwatch.com](https://www.justwatch.com/)). Usage privé et non commercial uniquement.
+- **TMDB** : ce produit utilise l'API TMDB, sans être approuvé ni certifié par TMDB ([themoviedb.org](https://www.themoviedb.org/)). Le logo affiché en pied de page est celui fourni par TMDB pour l'attribution.
+- **Wikipédia et Wikimedia Commons** : biographies sous licence CC BY-SA. Chaque photo a sa propre licence, indiquée sur la page du fichier, vers laquelle pointe le crédit affiché sous la photo.
+- **Drapeaux** : police TwemojiCountryFlags, graphismes [Twemoji](https://github.com/jdecked/twemoji) sous licence CC-BY 4.0.
+
+L'application affiche ces crédits dans son pied de page et sous la photo de chaque personne.
