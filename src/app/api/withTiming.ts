@@ -7,7 +7,11 @@ export function withTiming<A extends unknown[]>(
 ): (...args: A) => Promise<Response> {
   return async (...args) => {
     const { result, timings, totalMs } = await runWithTiming(() => handler(...args));
-    result.headers.set("Server-Timing", serverTimingHeader(timings, totalMs));
+    try {
+      result.headers.set("Server-Timing", serverTimingHeader(timings, totalMs));
+    } catch {
+      // En-têtes immuables (Response.redirect, réponse relayée) : la mesure est simplement omise.
+    }
     return result;
   };
 }

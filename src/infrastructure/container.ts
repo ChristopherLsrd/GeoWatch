@@ -11,6 +11,7 @@ import { SearchHistory } from "@/application/history/SearchHistory";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
 import { Watchlist } from "@/application/watchlist/Watchlist";
+import { WatchlistCheck } from "@/application/watchlist/WatchlistCheck";
 import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
 import { JustWatchPersonCatalog } from "./justwatch/JustWatchPersonCatalog";
@@ -58,3 +59,6 @@ export const dailyCheck = new DailyCheck(
   alertRepository,
 );
 export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);
+export const watchlistCheck = new WatchlistCheck(watchlist, watchStatusRepository, subscriptionRepository, (title, subs) =>
+  dailyCheck.checkTitle(title, subs),
+);
