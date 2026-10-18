@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, HomeIcon } from "@heroicons/react/24/outline";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckCircleIcon, HomeIcon, PlayCircleIcon } from "@heroicons/react/24/outline";
 import { availableAtHome, homeOfferLink } from "@/application/catalog/availableAtHome";
 import { countryFlag, countryName } from "@/domain/Country";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
@@ -13,6 +13,7 @@ import { apiFetch } from "./apiFetch";
 import { formatRuntime, formatScore } from "./format";
 import { OfferResults } from "./OfferResults";
 import { ROLE_PARAMS } from "./personRoles";
+import { TrailerDialog } from "./TrailerDialog";
 import { useAvailabilityBatches } from "./useAvailabilityBatches";
 import { useFitPosterWidth } from "./useFitPosterWidth";
 import { WatchlistButton } from "./WatchlistButton";
@@ -220,6 +221,14 @@ type AtHomeEntry = { subscription: Subscription; link: string | null };
 function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEntry[] }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  const trailerButtonRef = useRef<HTMLButtonElement>(null);
+  const trailer = title.trailer;
+  // Langue précisée seulement quand la vidéo n'est pas en version originale.
+  const trailerLanguage =
+    trailer?.language && trailer.language !== title.originalLanguage
+      ? languageName(trailer.language).toLocaleLowerCase("fr")
+      : null;
   const { infoRef, posterWidth } = useFitPosterWidth();
   const pills = ratingPills(title);
   const meta = [
@@ -403,7 +412,27 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
               </div>
             )
           )}
-          <WatchlistButton titleId={title.id} />
+          <WatchlistButton
+            titleId={title.id}
+            extraAction={
+              trailer ? (
+                <button ref={trailerButtonRef} type="button" onClick={() => setTrailerOpen(true)}>
+                  <PlayCircleIcon aria-hidden="true" />
+                  {trailerLanguage ? `Bande-annonce (${trailerLanguage})` : "Bande-annonce"}
+                </button>
+              ) : undefined
+            }
+          />
+          {trailer && trailerOpen && (
+            <TrailerDialog
+              youtubeKey={trailer.youtubeKey}
+              name={trailer.name}
+              onClose={() => {
+                setTrailerOpen(false);
+                trailerButtonRef.current?.focus();
+              }}
+            />
+          )}
         </div>
       </div>
     </header>
