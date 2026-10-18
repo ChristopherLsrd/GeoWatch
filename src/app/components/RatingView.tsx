@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import {
   DEFAULT_RATING_FILTERS,
   isRatingListKnown,
@@ -255,12 +256,23 @@ export function RatingView({ country, code, initialSearch }: { country: string; 
       {/* Mobile : la barre est masquée en CSS tant que « is-open » manque ; les champs restent montés. */}
       <button
         type="button"
-        className="ghost rating-filters-toggle"
+        className="filters-toggle"
         aria-expanded={filtersOpen}
         aria-controls="rating-filters"
         onClick={() => setFiltersOpen((open) => !open)}
       >
-        {activeCount > 0 ? `Filtres et tri (${activeCount})` : "Filtres et tri"}
+        <FunnelIcon aria-hidden="true" />
+        Filtres
+        {activeCount > 0 && (
+          <span className="filters-count" aria-label={`${activeCount} filtres actifs`}>
+            {activeCount}
+          </span>
+        )}
+        {filtersOpen ? (
+          <ChevronUpIcon className="filters-chevron" aria-hidden="true" />
+        ) : (
+          <ChevronDownIcon className="filters-chevron" aria-hidden="true" />
+        )}
       </button>
       <div id="rating-filters" className={filtersOpen ? "rating-filters is-open" : "rating-filters"}>
         <input
