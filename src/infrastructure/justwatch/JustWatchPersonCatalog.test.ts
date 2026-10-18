@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
-import { JustWatchPersonCatalog } from "./JustWatchPersonCatalog";
+import { JustWatchPersonCatalog, offersBatchSize } from "./JustWatchPersonCatalog";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { query: string; variables: Record<string, unknown> }[] = [];
   const fn = (async (_url: string, init: RequestInit) => {
     calls.push(JSON.parse(String(init.body)));
     return new Response(JSON.stringify(body), { status });
+  }) as unknown as typeof fetch;
+  return { fn, calls };
+}
+
+// Une réponse par appel, dans l'ordre.
+function sequenceFetch(bodies: unknown[]) {
+  const calls: { query: string; variables: Record<string, unknown> }[] = [];
+  const fn = (async (_url: string, init: RequestInit) => {
+    calls.push(JSON.parse(String(init.body)));
+    return new Response(JSON.stringify(bodies[calls.length - 1]), { status: 200 });
   }) as unknown as typeof fetch;
   return { fn, calls };
 }
@@ -33,25 +43,33 @@ function jwNode(id: string, title: string, extra: Record<string, unknown> = {}) 
 const emptyList = { edges: [] };
 
 describe("JustWatchPersonCatalog", () => {
-  it("demande la fiche et les six listes en une requête, avec les offres des pays d'abonnement", async () => {
-    const { fn, calls } = fakeFetch(200, {
-      data: {
-        node: {
-          id: "tp1725",
-          fr: { fullName: "Christopher Nolan", portraitUrl: null, dateOfBirth: "1970-07-30", shortDescription: "Bio EN" },
-          en: { shortDescription: "Bio EN" },
+  it("demande la fiche et les six listes, puis les offres des titres uniques dans les pays d'abonnement", async () => {
+    const { fn, calls } = sequenceFetch([
+      {
+        data: {
+          node: {
+            id: "tp1725",
+            fr: { fullName: "Christopher Nolan", portraitUrl: null, dateOfBirth: "1970-07-30", shortDescription: "Bio EN" },
+            en: { shortDescription: "Bio EN" },
+          },
+          DIRECTOR_FR: { edges: [jwNode("tm92641", "Inception")] },
+          DIRECTOR_US: { edges: [jwNode("tm92641", "Inception")] },
+          ACTOR_FR: emptyList,
+          ACTOR_US: emptyList,
+          ALL_FR: { edges: [jwNode("tm1", "Man of Steel"), { node: { id: "ts1", objectType: "SHOW_SEASON", content: null } }] },
+          ALL_US: emptyList,
         },
-        DIRECTOR_FR: { edges: [jwNode("tm92641", "Inception", { flatrate_FR: [{ package: { packageId: 8 } }, { package: { packageId: 8 } }] })] },
-        DIRECTOR_US: { edges: [jwNode("tm92641", "Inception", { flatrate_FR: [] })] },
-        ACTOR_FR: emptyList,
-        ACTOR_US: emptyList,
-        ALL_FR: { edges: [jwNode("tm1", "Man of Steel"), { node: { id: "ts1", objectType: "SHOW_SEASON", content: null } }] },
-        ALL_US: emptyList,
       },
-    });
+      {
+        data: {
+          t0: { flatrate_FR: [{ package: { packageId: 8 } }, { package: { packageId: 8 } }] },
+          t1: { flatrate_FR: [] },
+        },
+      },
+    ]);
     const result = await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1725", ["FR"]);
 
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(calls[0].variables).toMatchObject({
       nodeId: "tp1725",
       directorFilter: { personId: "tp1725", personRole: "DIRECTOR" },
@@ -61,7 +79,11 @@ describe("JustWatchPersonCatalog", () => {
     for (const alias of ["DIRECTOR_FR", "DIRECTOR_US", "ACTOR_FR", "ACTOR_US", "ALL_FR", "ALL_US"]) {
       expect(calls[0].query).toContain(`${alias}: popularTitles(`);
     }
-    expect(calls[0].query).toContain("flatrate_FR: offers(country: FR, platform: WEB");
+    // Les offres multiplient la complexité de la requête par titre : elles partent à part.
+    expect(calls[0].query).not.toContain("offers(");
+    expect(calls[1].variables).toEqual({ id0: "tm92641", id1: "tm1" });
+    expect(calls[1].query).toContain("t0: node(id: $id0)");
+    expect(calls[1].query).toContain("flatrate_FR: offers(country: FR, platform: WEB");
     expect(result?.person).toEqual({
       id: "tp1725",
       name: "Christopher Nolan",
@@ -96,7 +118,15 @@ describe("JustWatchPersonCatalog", () => {
       },
     });
     await new JustWatchPersonCatalog({ fetch: fn }).getPerson("tp1", ["XX" as never]);
+    expect(calls).toHaveLength(1);
     expect(calls[0].query).not.toContain("offers(");
+  });
+
+  it("découpe les offres en lots sous la limite de complexité de JustWatch (350 000)", () => {
+    // Mesuré le 2026-10-18 : environ 20 par titre, plus 150 par pays et par titre.
+    expect(offersBatchSize(8) * (20 + 150 * 8)).toBeLessThanOrEqual(300_000);
+    expect(offersBatchSize(8)).toBeGreaterThanOrEqual(200);
+    expect(offersBatchSize(1)).toBeGreaterThanOrEqual(1000);
   });
 
   it("renvoie null pour une personne inconnue", async () => {

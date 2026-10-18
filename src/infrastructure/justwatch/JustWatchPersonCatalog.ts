@@ -1,5 +1,6 @@
 // Adaptateur PersonCatalog : fiche d'une personne et filmographie, depuis l'API GraphQL de JustWatch.
-// Une seule requête : la fiche (texte français et anglais) et six listes (réalisation, interprétation, tous rôles × FR, US).
+// Une requête pour la fiche (texte français et anglais) et six listes (réalisation, interprétation, tous rôles × FR, US),
+// puis les offres en abonnement des titres uniques dans les pays d'abonnement, par lots.
 
 import { JUSTWATCH_COUNTRIES } from "@/config/countries";
 import { isCountryCode, type CountryCode } from "@/domain/Country";
@@ -16,6 +17,16 @@ const LISTS = [
   { key: "ALL", filter: "$allFilter" },
 ] as const;
 
+// JustWatch refuse une requête de complexité supérieure à 350 000. Mesure du 2026-10-18 pour la requête
+// des offres : environ 20 par titre, plus 150 par pays et par titre. On garde une marge.
+const OFFERS_COMPLEXITY_BUDGET = 300_000;
+
+export function offersBatchSize(countryCount: number): number {
+  return Math.max(1, Math.floor(OFFERS_COMPLEXITY_BUDGET / (20 + 150 * countryCount)));
+}
+
+type FlatrateOffers = { package: { packageId: number } }[] | null | undefined;
+
 type JustWatchPersonTitle = {
   id: string;
   objectType: string;
@@ -28,7 +39,6 @@ type JustWatchPersonTitle = {
     externalIds: { imdbId: string | null; tmdbId: string | null } | null;
     scoring: { imdbScore: number | null; tmdbScore: number | null } | null;
   } | null;
-  [flatrate: `flatrate_${string}`]: { package: { packageId: number } }[] | null | undefined;
 };
 
 type PersonResponse = {
@@ -57,7 +67,7 @@ export class JustWatchPersonCatalog implements PersonCatalog {
         actorFilter: { personId, personRole: "ACTOR" },
         allFilter: { personId },
       },
-      query: personQuery(countries),
+      query: PERSON_QUERY,
     });
     // Identifiant inconnu : JustWatch renvoie un nœud nul avec l'erreur « no merge target found ».
     // Toute autre erreur (même avec un nœud nul) est un échec passager : la page propose « Réessayer ».
@@ -79,17 +89,54 @@ export class JustWatchPersonCatalog implements PersonCatalog {
     };
     const list = (key: string) =>
       LIST_COUNTRIES.flatMap((c) => data[`${key}_${c}`]?.edges ?? [])
-        .map((edge) => toEntry(edge.node, countries))
+        .map((edge) => toEntry(edge.node))
         .filter((entry) => entry !== null);
     const filmography: RawFilmography = { DIRECTOR: list("DIRECTOR"), ACTOR: list("ACTOR"), ALL: list("ALL") };
+
+    const offers = await this.flatrateOffers(
+      [...new Set([...filmography.DIRECTOR, ...filmography.ACTOR, ...filmography.ALL].map((e) => e.id))],
+      countries,
+    );
+    for (const entry of [...filmography.DIRECTOR, ...filmography.ACTOR, ...filmography.ALL]) {
+      entry.flatrate = offers.get(entry.id) ?? Object.fromEntries(countries.map((code) => [code, []]));
+    }
     return { person, filmography };
+  }
+
+  // Plateformes en abonnement par titre et par pays, en lots qui restent sous la limite de complexité.
+  private async flatrateOffers(titleIds: string[], countries: CountryCode[]): Promise<Map<string, FilmographyEntry["flatrate"]>> {
+    const result = new Map<string, FilmographyEntry["flatrate"]>();
+    if (countries.length === 0) return result;
+    const offers = countries
+      .map((code) => `flatrate_${code}: offers(country: ${code}, platform: WEB, filter: { monetizationTypes: [FLATRATE] }) { package { packageId } }`)
+      .join("\n");
+    const size = offersBatchSize(countries.length);
+    for (let start = 0; start < titleIds.length; start += size) {
+      const batch = titleIds.slice(start, start + size);
+      const query = `
+query GetPersonOffers(${batch.map((_, i) => `$id${i}: ID!`).join(", ")}) {
+  ${batch.map((_, i) => `t${i}: node(id: $id${i}) { ... on MovieOrShow { ${offers} } }`).join("\n  ")}
+}`;
+      const data = await this.client.post<Record<string, Record<string, FlatrateOffers> | null>>({
+        operationName: "GetPersonOffers",
+        variables: Object.fromEntries(batch.map((id, i) => [`id${i}`, id])),
+        query,
+      });
+      batch.forEach((id, i) => {
+        const node = data[`t${i}`];
+        result.set(
+          id,
+          Object.fromEntries(
+            countries.map((code) => [code, [...new Set((node?.[`flatrate_${code}`] ?? []).map((o) => String(o.package.packageId)))]]),
+          ),
+        );
+      });
+    }
+    return result;
   }
 }
 
-function personQuery(countries: CountryCode[]): string {
-  const offers = countries
-    .map((code) => `flatrate_${code}: offers(country: ${code}, platform: WEB, filter: { monetizationTypes: [FLATRATE] }) { package { packageId } }`)
-    .join("\n");
+const PERSON_QUERY = (() => {
   const lists = LISTS.flatMap(({ key, filter }) =>
     LIST_COUNTRIES.map(
       (country) => `
@@ -106,7 +153,6 @@ function personQuery(countries: CountryCode[]): string {
         externalIds { imdbId tmdbId }
         scoring { imdbScore tmdbScore }
       }
-      ${offers}
     } }
   }`,
     ),
@@ -122,9 +168,10 @@ query GetPerson($nodeId: ID!, $directorFilter: TitleFilter!, $actorFilter: Title
   }
   ${lists}
 }`;
-}
+})();
 
-function toEntry(node: JustWatchPersonTitle, countries: CountryCode[]): FilmographyEntry | null {
+// Les plateformes en abonnement sont ajoutées ensuite (flatrateOffers).
+function toEntry(node: JustWatchPersonTitle): FilmographyEntry | null {
   if ((node.objectType !== "MOVIE" && node.objectType !== "SHOW") || !node.content) return null;
   const { content } = node;
   return {
@@ -139,8 +186,6 @@ function toEntry(node: JustWatchPersonTitle, countries: CountryCode[]): Filmogra
     runtime: content.runtime || null,
     imdbScore: content.scoring?.imdbScore ?? null,
     tmdbScore: content.scoring?.tmdbScore ?? null,
-    flatrate: Object.fromEntries(
-      countries.map((code) => [code, [...new Set((node[`flatrate_${code}`] ?? []).map((o) => String(o.package.packageId)))]]),
-    ),
+    flatrate: {},
   };
 }
