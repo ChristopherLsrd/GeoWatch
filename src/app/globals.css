@@ -282,12 +282,11 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 .search-box { display: flex; flex-direction: column; gap: 16px; }
 .search-form { display: flex; flex-direction: column; gap: 10px; }
 .search-field {
-  flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 54px;
+  height: 56px;
   padding: 0 16px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
@@ -305,7 +304,7 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
   .home-hero { gap: 20px; }
   .eyebrow { font-size: 12px; }
   .search-form { flex-direction: row; }
-  .search-field { height: 56px; }
+  .search-form .search-field { flex: 1; }
   .search-field input[type="search"] { font-size: 17px; }
   .search-form button.primary { min-height: 56px; }
 }
