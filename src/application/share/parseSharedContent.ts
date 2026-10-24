@@ -24,16 +24,17 @@ export function parseSharedContent(fields: SharedFields): SharedContent {
   const title = fields.title?.trim() ?? "";
   const text = fields.text?.trim() ?? "";
   const url = fields.url?.trim() ?? "";
-  const link = [url, text, title].map(firstLink).find((found) => found !== null) ?? null;
-  const recognized = link ? recognize(new URL(link)) : null;
-  if (recognized) return recognized;
+  // Tous les liens, dans l'ordre url, text, title : le premier reconnu l'emporte.
+  for (const link of [url, text, title].flatMap(links)) {
+    const recognized = recognize(new URL(link));
+    if (recognized) return recognized;
+  }
   const query = (withoutLinks(text) || withoutLinks(title)).slice(0, MAX_QUERY_LENGTH);
   return query ? { kind: "query", query } : { kind: "empty" };
 }
 
-function firstLink(value: string): string | null {
-  const raw = value.match(LINK)?.[0].replace(TRAILING_PUNCTUATION, "");
-  return raw && URL.canParse(raw) ? raw : null;
+function links(value: string): string[] {
+  return (value.match(LINKS) ?? []).map((raw) => raw.replace(TRAILING_PUNCTUATION, "")).filter((raw) => URL.canParse(raw));
 }
 
 function withoutLinks(value: string): string {

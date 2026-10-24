@@ -44,4 +44,9 @@ describe("parseSharedContent", () => {
     expect(parseSharedContent({ title: " ", text: "", url: "" })).toEqual({ kind: "empty" });
     expect(parseSharedContent({ text: "https://exemple.fr/x" })).toEqual({ kind: "empty" });
   });
+
+  it("essaie tous les liens, pas seulement le premier", () => {
+    expect(parseSharedContent({ url: "https://exemple.fr/page", text: "Dune https://www.imdb.com/title/tt1160419/" })).toEqual({ kind: "imdb", imdbId: "tt1160419" });
+    expect(parseSharedContent({ text: "https://exemple.fr https://boxd.it/x" })).toEqual({ kind: "letterboxd", url: "https://boxd.it/x" });
+  });
 });
