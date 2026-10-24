@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { WatchlistOverviewItem } from "./WatchlistOverview";
-import { filterWatchlist, sortWatchlist, watchlistFacets } from "./browseWatchlist";
+import {
+  applicableFilters,
+  filterWatchlist,
+  NO_SAVED_FILTERS,
+  parseSavedFilters,
+  sortWatchlist,
+  watchlistFacets,
+} from "./browseWatchlist";
 
 const netflix = { platform: { id: "8", name: "Netflix", iconUrl: null }, country: "FR" };
 
@@ -96,5 +103,37 @@ describe("filterWatchlist", () => {
       directors: ["Christopher Nolan", "Jean-Pierre Jeunet"],
       genres: ["Comédie", "Drame", "Science-Fiction"],
     });
+  });
+});
+
+describe("parseSavedFilters", () => {
+  it("relit des filtres enregistrés", () => {
+    const saved = { type: "SHOW", director: "Christopher Nolan", genre: "Drame", atHomeOnly: true };
+    expect(parseSavedFilters(JSON.stringify(saved))).toEqual(saved);
+  });
+
+  it("revient aux filtres par défaut si la valeur est absente ou illisible", () => {
+    expect(parseSavedFilters(null)).toEqual(NO_SAVED_FILTERS);
+    expect(parseSavedFilters("{pas du json")).toEqual(NO_SAVED_FILTERS);
+    expect(parseSavedFilters("42")).toEqual(NO_SAVED_FILTERS);
+  });
+
+  it("ignore les champs invalides un par un", () => {
+    const raw = JSON.stringify({ type: "FILM", director: 3, genre: "Drame", atHomeOnly: "oui" });
+    expect(parseSavedFilters(raw)).toEqual({ ...NO_SAVED_FILTERS, genre: "Drame" });
+  });
+});
+
+describe("applicableFilters", () => {
+  const facets = watchlistFacets(items);
+
+  it("garde les valeurs encore présentes dans la liste", () => {
+    const saved = { type: "MOVIE" as const, director: "Christopher Nolan", genre: "Drame", atHomeOnly: true };
+    expect(applicableFilters(saved, facets)).toEqual(saved);
+  });
+
+  it("met de côté un réalisateur ou un genre qui n'est plus dans la liste", () => {
+    const saved = { ...NO_SAVED_FILTERS, director: "Agnès Varda", genre: "Western" };
+    expect(applicableFilters(saved, facets)).toEqual(NO_SAVED_FILTERS);
   });
 });

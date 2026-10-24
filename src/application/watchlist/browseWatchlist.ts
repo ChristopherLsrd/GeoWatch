@@ -87,3 +87,44 @@ export function watchlistFacets(items: Browsable[]): { directors: string[]; genr
     genres: sorted(items.flatMap((i) => i.details?.genres ?? [])),
   };
 }
+
+// Filtres de l'accueil mémorisés d'une visite à l'autre (la recherche texte n'en fait pas partie).
+export type SavedWatchlistFilters = {
+  type: TitleType | "";
+  director: string;
+  genre: string;
+  atHomeOnly: boolean;
+};
+
+export const NO_SAVED_FILTERS: SavedWatchlistFilters = { type: "", director: "", genre: "", atHomeOnly: false };
+
+// Relit une valeur enregistrée ; chaque champ invalide reprend sa valeur par défaut.
+export function parseSavedFilters(raw: string | null): SavedWatchlistFilters {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw ?? "null");
+  } catch {
+    return NO_SAVED_FILTERS;
+  }
+  if (!parsed || typeof parsed !== "object") return NO_SAVED_FILTERS;
+  const value = parsed as Record<string, unknown>;
+  return {
+    type: value.type === "MOVIE" || value.type === "SHOW" ? value.type : "",
+    director: typeof value.director === "string" ? value.director : "",
+    genre: typeof value.genre === "string" ? value.genre : "",
+    atHomeOnly: value.atHomeOnly === true,
+  };
+}
+
+// Un réalisateur ou un genre absent de la liste (titre retiré, fiche pas encore chargée) est mis
+// de côté : sinon la liste serait vide alors que le menu afficherait « Tous ».
+export function applicableFilters(
+  filters: SavedWatchlistFilters,
+  facets: { directors: string[]; genres: string[] },
+): SavedWatchlistFilters {
+  return {
+    ...filters,
+    director: facets.directors.includes(filters.director) ? filters.director : "",
+    genre: facets.genres.includes(filters.genre) ? filters.genre : "",
+  };
+}
