@@ -10,5 +10,14 @@ Avant de la construire, il faudra :
 - mesurer le temps de traitement ajouté à chaque recherche (une requête JustWatch de plus) ;
 - juger si l'affichage des résultats devient brouillon.
 
-## Autres
-- [ ] **Licence du projet** : choisir la licence (ISC indiquée par défaut dans `package.json`, MIT, ou aucune, c'est-à-dire tous droits réservés) et ajouter le fichier `LICENSE` et une section au README. Le README crédite déjà la police des drapeaux (Twemoji, CC-BY 4.0).
+## Date de retrait d'une offre (notée le 2026-10-24, abandonnée pour l'instant)
+
+Demande : afficher sur la fiche d'un titre la date à laquelle il quitte une plateforme, et sur l'accueil, un picto « ! » (dans un cercle coloré) sur les titres « disponibles chez moi » qui vont bientôt ne plus l'être.
+Abandonnée parce que JustWatch ne renseigne cette date que pour une partie des plateformes.
+
+Test du 2026-10-24 (les 40 films les plus populaires en FR, BE et CA) :
+- les offres JustWatch ont les champs `availableTo` (date), `availableToTime` (date et heure UTC) et `availableFromTime` ; on ne les demande pas aujourd'hui (fragment `TitleOffer`). L'introspection GraphQL est désactivée ;
+- offres en abonnement avec une date de retrait : 20 sur 98 en FR, 29 sur 98 en BE, 7 sur 144 en CA ;
+- HBO Max : presque toujours renseignée (11 sur 11 en FR, 18 sur 18 en BE) ; Prime Video et Disney+ : parfois (2 ou 3 sur 9) ; Netflix, Canal+, Apple TV, Crave et Paramount+ : jamais.
+
+À reprendre si la couverture s'améliore : refaire la même mesure avant de construire quoi que ce soit.
