@@ -1,6 +1,6 @@
 // Correspondance entre un film de la watchlist Letterboxd (titre + année) et les résultats de recherche JustWatch.
 
-import type { Title } from "@/domain/Title";
+import type { Title, TitleType } from "@/domain/Title";
 import type { LetterboxdEntry } from "./parseLetterboxdCsv";
 
 export const MAX_CANDIDATES = 5;
@@ -22,9 +22,11 @@ export function normalizeTitle(title: string): string {
     .replace(/^(the|a|an|le|la|les) /, "");
 }
 
-export function classify(entry: Pick<LetterboxdEntry, "name" | "year">, results: Title[]): Match {
+// Le type vaut « film » par défaut (watchlist Letterboxd) ; le partage d'une série IMDb ou TMDB le précise.
+export function classify(entry: Pick<LetterboxdEntry, "name" | "year"> & { type?: TitleType }, results: Title[]): Match {
+  const type = entry.type ?? "MOVIE";
   const compatible = results.filter(
-    (t) => t.type === "MOVIE" && (entry.year === null || (t.year !== null && Math.abs(t.year - entry.year) <= YEAR_TOLERANCE)),
+    (t) => t.type === type && (entry.year === null || (t.year !== null && Math.abs(t.year - entry.year) <= YEAR_TOLERANCE)),
   );
   if (compatible.length === 0) return { kind: "notFound" };
   const target = normalizeTitle(entry.name);

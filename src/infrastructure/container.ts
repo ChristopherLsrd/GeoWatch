@@ -11,6 +11,7 @@ import { SearchHistory } from "@/application/history/SearchHistory";
 import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
+import { ResolveSharedLink } from "@/application/share/ResolveSharedLink";
 import { Watchlist } from "@/application/watchlist/Watchlist";
 import { WatchlistCheck } from "@/application/watchlist/WatchlistCheck";
 import { WatchlistOverview } from "@/application/watchlist/WatchlistOverview";
@@ -18,7 +19,10 @@ import { ImdbParentsGuide } from "./imdb/ImdbParentsGuide";
 import { JustWatchGraphqlCatalog } from "./justwatch/JustWatchGraphqlCatalog";
 import { JustWatchRatingCatalog } from "./justwatch/JustWatchRatingCatalog";
 import { JustWatchPersonCatalog } from "./justwatch/JustWatchPersonCatalog";
+import { JustWatchTitlePaths } from "./justwatch/JustWatchTitlePaths";
+import { LetterboxdHttpReader } from "./letterboxd/LetterboxdHttpReader";
 import { getDb } from "./mongo/client";
+import { TmdbExternalTitleLookup } from "./tmdb/TmdbExternalTitleLookup";
 import { TmdbTitleExtras } from "./tmdb/TmdbTitleExtras";
 import { TmdbPersonSource } from "./tmdb/TmdbPersonSource";
 import { WikipediaPersonSource } from "./wikipedia/WikipediaPersonSource";
@@ -46,6 +50,12 @@ export const getPerson = new GetPerson(
 );
 
 export const searchTitles = new SearchTitles(catalog);
+export const resolveSharedLink = new ResolveSharedLink(
+  catalog,
+  new TmdbExternalTitleLookup({ apiKey: process.env.TMDB_API_KEY }),
+  new LetterboxdHttpReader(),
+  new JustWatchTitlePaths(),
+);
 export const contentAdvisories = new CachedContentAdvisories(new ImdbParentsGuide(), getDb);
 export const getTitle = new GetTitle(
   catalog,
