@@ -8,6 +8,11 @@ describe("parseSharedContent", () => {
     expect(parseSharedContent({ url: "https://www.imdb.com/fr/title/tt0111161" })).toEqual({ kind: "imdb", imdbId: "tt0111161" });
   });
 
+  it("un lien reconnu garde le texte partagé sans les liens, pour la recherche de repli", () => {
+    expect(parseSharedContent({ text: "Les Évadés (1994) https://www.imdb.com/title/tt0111161/?ref_=ext_shr" })).toEqual({ kind: "imdb", imdbId: "tt0111161", query: "Les Évadés (1994)" });
+    expect(parseSharedContent({ title: "Parasite", url: "https://boxd.it/RTVm" })).toEqual({ kind: "letterboxd", url: "https://boxd.it/RTVm", query: "Parasite" });
+  });
+
   it("reconnaît un lien TMDB de film ou de série", () => {
     expect(parseSharedContent({ url: "https://www.themoviedb.org/movie/278-the-shawshank-redemption?language=fr" })).toEqual({ kind: "tmdb", tmdbId: "278", type: "MOVIE" });
     expect(parseSharedContent({ url: "https://www.themoviedb.org/tv/1396" })).toEqual({ kind: "tmdb", tmdbId: "1396", type: "SHOW" });
@@ -25,7 +30,7 @@ describe("parseSharedContent", () => {
   });
 
   it("cherche le lien dans url, puis text, puis title, et retire la ponctuation collée à la fin", () => {
-    expect(parseSharedContent({ text: "Regarde ça : https://boxd.it/RTVm." })).toEqual({ kind: "letterboxd", url: "https://boxd.it/RTVm" });
+    expect(parseSharedContent({ text: "Regarde ça : https://boxd.it/RTVm." })).toEqual({ kind: "letterboxd", url: "https://boxd.it/RTVm", query: "Regarde ça :" });
     expect(parseSharedContent({ title: "https://www.imdb.com/title/tt0111161/" })).toEqual({ kind: "imdb", imdbId: "tt0111161" });
   });
 
@@ -46,7 +51,7 @@ describe("parseSharedContent", () => {
   });
 
   it("essaie tous les liens, pas seulement le premier", () => {
-    expect(parseSharedContent({ url: "https://exemple.fr/page", text: "Dune https://www.imdb.com/title/tt1160419/" })).toEqual({ kind: "imdb", imdbId: "tt1160419" });
+    expect(parseSharedContent({ url: "https://exemple.fr/page", text: "Dune https://www.imdb.com/title/tt1160419/" })).toEqual({ kind: "imdb", imdbId: "tt1160419", query: "Dune" });
     expect(parseSharedContent({ text: "https://exemple.fr https://boxd.it/x" })).toEqual({ kind: "letterboxd", url: "https://boxd.it/x" });
   });
 });

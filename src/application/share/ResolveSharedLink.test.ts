@@ -101,6 +101,16 @@ describe("ResolveSharedLink", () => {
     expect(await catalogDown.execute({ url: "https://www.imdb.com/title/tt0111161/" })).toEqual({ kind: "search", query: "Les Évadés" });
   });
 
+  it("IMDb : TMDB en panne avec du texte partagé → recherche de ce texte", async () => {
+    const resolve = new ResolveSharedLink(catalog({}).port, lookup({ tt0111161: new Error("TMDB a répondu 500") }), NO_LETTERBOXD, NO_PATHS);
+    expect(await resolve.execute({ text: "Les Évadés (1994) https://www.imdb.com/title/tt0111161/?ref_=ext_shr" })).toEqual({ kind: "search", query: "Les Évadés (1994)" });
+  });
+
+  it("Letterboxd injoignable sans slug, avec du texte partagé → recherche de ce texte", async () => {
+    const resolve = new ResolveSharedLink(catalog({}).port, lookup({}), NO_LETTERBOXD, NO_PATHS);
+    expect(await resolve.execute({ title: "Parasite", text: "https://boxd.it/abc" })).toEqual({ kind: "search", query: "Parasite" });
+  });
+
   it("TMDB : retient la série, pas le film qui porte le même numéro TMDB", async () => {
     const show: ExternalTitle = { type: "SHOW", name: "Breaking Bad", originalName: null, year: 2008, imdbId: null, tmdbId: "1396" };
     const film = title({ id: "tm5", name: "Breaking Bad", tmdbId: "1396" });

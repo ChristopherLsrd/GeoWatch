@@ -35,24 +35,24 @@ export class ResolveSharedLink {
       case "query":
         return search(shared.query);
       case "imdb":
-        return (await this.fromExternal(() => this.lookup.byImdbId(shared.imdbId))) ?? search("");
+        return (await this.fromExternal(() => this.lookup.byImdbId(shared.imdbId))) ?? search(shared.query ?? "");
       case "tmdb":
-        return (await this.fromExternal(() => this.lookup.byTmdbId(shared.tmdbId, shared.type))) ?? search("");
+        return (await this.fromExternal(() => this.lookup.byTmdbId(shared.tmdbId, shared.type))) ?? search(shared.query ?? "");
       case "justwatch":
-        return this.fromJustWatch(shared.path);
+        return this.fromJustWatch(shared.path, shared.query ?? "");
       case "letterboxd":
-        return this.fromLetterboxd(shared.url);
+        return this.fromLetterboxd(shared.url, shared.query ?? "");
     }
   }
 
-  private async fromJustWatch(path: string): Promise<ShareResolution> {
+  private async fromJustWatch(path: string, sharedText: string): Promise<ShareResolution> {
     const id = await this.paths.byPath(path).catch(() => null);
     if (id) return { kind: "title", id };
     // « /fr/film/la-ligne-verte » → « la ligne verte ».
-    return search(slugToName(path.split("/")[3] ?? ""));
+    return search(slugToName(path.split("/")[3] ?? "") || sharedText);
   }
 
-  private async fromLetterboxd(url: string): Promise<ShareResolution> {
+  private async fromLetterboxd(url: string, sharedText: string): Promise<ShareResolution> {
     const film = await this.letterboxd.read(url).catch(() => UNREADABLE);
     if (film.kind === "found") {
       const { imdbId, tmdbId } = film;
@@ -61,7 +61,7 @@ export class ResolveSharedLink {
         (tmdbId ? await this.fromExternal(() => this.lookup.byTmdbId(tmdbId, "MOVIE")) : null);
       if (resolved) return resolved;
     }
-    return film.slug ? this.fromSlug(film.slug) : search("");
+    return film.slug ? this.fromSlug(film.slug) : search(sharedText);
   }
 
   // null quand la source externe ne connaît pas le titre (ou ne répond pas).

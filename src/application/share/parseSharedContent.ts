@@ -1,5 +1,6 @@
 // Analyse du contenu partagé vers GeoWatch (menu Partager d'Android) : reconnaît un lien IMDb, TMDB,
 // JustWatch ou Letterboxd, sinon garde le texte pour la recherche de l'accueil.
+// Un lien reconnu garde aussi le texte sans liens (« query »), dernier recours si la résolution échoue.
 // Letterboxd met le lien dans « text » ; IMDb ajoute un paramètre de suivi (?ref_=ext_shr).
 
 import type { TitleType } from "@/domain/Title";
@@ -7,10 +8,10 @@ import type { TitleType } from "@/domain/Title";
 export type SharedFields = { title?: string; text?: string; url?: string };
 
 export type SharedContent =
-  | { kind: "imdb"; imdbId: string }
-  | { kind: "tmdb"; tmdbId: string; type: TitleType }
-  | { kind: "justwatch"; path: string }
-  | { kind: "letterboxd"; url: string }
+  | { kind: "imdb"; imdbId: string; query?: string }
+  | { kind: "tmdb"; tmdbId: string; type: TitleType; query?: string }
+  | { kind: "justwatch"; path: string; query?: string }
+  | { kind: "letterboxd"; url: string; query?: string }
   | { kind: "query"; query: string }
   | { kind: "empty" };
 
@@ -24,12 +25,12 @@ export function parseSharedContent(fields: SharedFields): SharedContent {
   const title = fields.title?.trim() ?? "";
   const text = fields.text?.trim() ?? "";
   const url = fields.url?.trim() ?? "";
+  const query = (withoutLinks(text) || withoutLinks(title)).slice(0, MAX_QUERY_LENGTH);
   // Tous les liens, dans l'ordre url, text, title : le premier reconnu l'emporte.
   for (const link of [url, text, title].flatMap(links)) {
     const recognized = recognize(new URL(link));
-    if (recognized) return recognized;
+    if (recognized) return query ? { ...recognized, query } : recognized;
   }
-  const query = (withoutLinks(text) || withoutLinks(title)).slice(0, MAX_QUERY_LENGTH);
   return query ? { kind: "query", query } : { kind: "empty" };
 }
 
@@ -41,7 +42,7 @@ function withoutLinks(value: string): string {
   return value.replace(LINKS, " ").replace(/\s+/g, " ").trim();
 }
 
-function recognize(url: URL): SharedContent | null {
+function recognize(url: URL): Exclude<SharedContent, { kind: "query" | "empty" }> | null {
   const host = url.hostname.toLowerCase().replace(/^(www|m)\./, "");
   const path = url.pathname;
   if (host === "imdb.com") {
