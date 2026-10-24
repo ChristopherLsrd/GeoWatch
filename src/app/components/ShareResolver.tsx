@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ShareResolution } from "@/application/share/ResolveSharedLink";
 import type { Title } from "@/domain/Title";
 import { apiFetch } from "./apiFetch";
@@ -15,9 +15,15 @@ type State = { kind: "loading" } | { kind: "candidates"; candidates: Title[] } |
 export function ShareResolver({ title, text, url }: { title: string; text: string; url: string }) {
   const router = useRouter();
   const [state, setState] = useState<State>({ kind: "loading" });
+  // Un seul appel en cours : relancer ou quitter l'écran annule le précédent.
+  const controller = useRef<AbortController | null>(null);
 
   const resolve = useCallback(
-    async (signal: AbortSignal) => {
+    async () => {
+      controller.current?.abort();
+      const current = new AbortController();
+      controller.current = current;
+      const signal = current.signal;
       setState({ kind: "loading" });
       try {
         const response = await apiFetch("/api/share/resolve", {
@@ -28,6 +34,7 @@ export function ShareResolver({ title, text, url }: { title: string; text: strin
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const resolution = (await response.json()) as ShareResolution;
+        if (signal.aborted) return;
         if (resolution.kind === "title") router.replace(`/titre/${encodeURIComponent(resolution.id)}`);
         else if (resolution.kind === "candidates") setState({ kind: "candidates", candidates: resolution.candidates });
         else router.replace(resolution.query ? `/?q=${encodeURIComponent(resolution.query)}` : "/");
@@ -39,9 +46,8 @@ export function ShareResolver({ title, text, url }: { title: string; text: strin
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    void resolve(controller.signal);
-    return () => controller.abort();
+    void resolve();
+    return () => controller.current?.abort();
   }, [resolve]);
 
   if (state.kind === "loading") {
@@ -61,7 +67,7 @@ export function ShareResolver({ title, text, url }: { title: string; text: strin
           Impossible de retrouver le titre.
         </p>
         <div className="share-actions">
-          <button type="button" onClick={() => void resolve(new AbortController().signal)}>
+          <button type="button" onClick={() => void resolve()}>
             Réessayer
           </button>
           <Link href="/">Chercher sur l&apos;accueil</Link>
