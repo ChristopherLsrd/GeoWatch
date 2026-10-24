@@ -66,4 +66,16 @@ describe("LetterboxdHttpReader", () => {
     const { fn } = fakeFetch({});
     expect(await new LetterboxdHttpReader(fn).read("https://letterboxd.com/film/clayface/")).toEqual({ kind: "unreadable", slug: "clayface" });
   });
+
+  it("ne lève pas pour une adresse invalide, sans appeler Letterboxd", async () => {
+    const { fn, urls } = fakeFetch({});
+    expect(await new LetterboxdHttpReader(fn).read("pas une url")).toEqual({ kind: "unreadable", slug: null });
+    expect(urls).toHaveLength(0);
+  });
+
+  it("refuse une adresse Letterboxd avec un port explicite", async () => {
+    const { fn, urls } = fakeFetch({});
+    expect(await new LetterboxdHttpReader(fn).read("https://letterboxd.com:8443/film/x/")).toEqual({ kind: "unreadable", slug: "x" });
+    expect(urls).toHaveLength(0);
+  });
 });

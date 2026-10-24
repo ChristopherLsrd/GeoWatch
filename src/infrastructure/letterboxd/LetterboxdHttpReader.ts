@@ -13,9 +13,10 @@ export class LetterboxdHttpReader implements LetterboxdFilmReader {
   constructor(private readonly fetchFn: typeof fetch = fetch) {}
 
   async read(url: string): Promise<LetterboxdFilm> {
-    let current = new URL(url);
-    let slug = slugOf(current);
+    let slug: string | null = null;
     try {
+      let current = new URL(url);
+      slug = slugOf(current);
       for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
         if (!isLetterboxd(current)) return { kind: "unreadable", slug };
         const response = await this.fetchFn(current.toString(), {
@@ -43,7 +44,7 @@ export class LetterboxdHttpReader implements LetterboxdFilmReader {
 }
 
 function isLetterboxd(url: URL): boolean {
-  return url.protocol === "https:" && HOSTS.has(url.hostname.replace(/^www\./, ""));
+  return url.protocol === "https:" && !url.port && HOSTS.has(url.hostname.replace(/^www\./, ""));
 }
 
 // « https://letterboxd.com/film/parasite-2019/ » → « parasite-2019 ».
