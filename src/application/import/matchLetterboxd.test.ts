@@ -69,4 +69,10 @@ describe("classify", () => {
     const results = [movie("tm1", "Heat", 1995)];
     expect(classify({ name: "Heat", year: null }, results)).toEqual({ kind: "sure", title: results[0] });
   });
+
+  it("cherche une série quand le type est précisé, un film sinon", () => {
+    const show = { ...movie("ts4", "Breaking Bad", 2008), type: "SHOW" as const };
+    expect(classify({ name: "Breaking Bad", year: 2008, type: "SHOW" }, [show])).toEqual({ kind: "sure", title: show });
+    expect(classify({ name: "Breaking Bad", year: 2008 }, [show])).toEqual({ kind: "notFound" });
+  });
 });
