@@ -641,6 +641,7 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .alerts-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .alerts-head h2 { margin: 0; }
 .alerts-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.alerts-more { display: block; margin: 10px auto 0; }
 .alert-row {
   display: flex;
   align-items: center;

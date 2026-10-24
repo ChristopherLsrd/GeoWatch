@@ -15,7 +15,10 @@ type AlertItem = {
   createdAt: string;
 };
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
+// Nombre de nouveautés visibles avant « Voir plus ».
+const COLLAPSED_COUNT = 5;
+
+const dateFormat =new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -25,6 +28,7 @@ function formatDate(iso: string): string {
 // Nouveautés détectées par la vérification quotidienne sur la liste à voir.
 export function AlertsPanel() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -74,6 +78,8 @@ export function AlertsPanel() {
 
   if (alerts.length === 0) return null;
 
+  const visibleAlerts = expanded ? alerts : alerts.slice(0, COLLAPSED_COUNT);
+
   return (
     <section className="alerts" aria-labelledby="alerts-heading">
       <div className="alerts-head">
@@ -85,8 +91,8 @@ export function AlertsPanel() {
           Tout masquer
         </button>
       </div>
-      <ul className="alerts-list">
-        {alerts.map((alert) => (
+      <ul id="alerts-list" className="alerts-list">
+        {visibleAlerts.map((alert) => (
           <li key={alert.id} className="alert-row">
             <Link href={`/titre/${encodeURIComponent(alert.title.id)}`} className="alert-link">
               {alert.title.posterUrl ? (
@@ -133,6 +139,17 @@ export function AlertsPanel() {
           </li>
         ))}
       </ul>
+      {alerts.length > COLLAPSED_COUNT && (
+        <button
+          type="button"
+          className="ghost alerts-more"
+          aria-expanded={expanded}
+          aria-controls="alerts-list"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Réduire" : `Voir plus (${alerts.length - COLLAPSED_COUNT})`}
+        </button>
+      )}
     </section>
   );
 }
