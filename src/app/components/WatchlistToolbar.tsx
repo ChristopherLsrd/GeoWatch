@@ -3,15 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowsUpDownIcon, FunnelIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
+  applicableFilters,
   filterWatchlist,
+  NO_SAVED_FILTERS,
+  parseSavedFilters,
   sortWatchlist,
   WATCHLIST_SORTS,
   watchlistFacets,
+  type SavedWatchlistFilters,
   type WatchlistSort,
 } from "@/application/watchlist/browseWatchlist";
 import type { OverviewItem } from "./HomeBadge";
-
-type TypeFilter = "" | "MOVIE" | "SHOW";
 
 type Prefs = { sort: WatchlistSort; reverse: boolean };
 const DEFAULT_PREFS: Prefs = { sort: "added", reverse: false };
@@ -32,6 +34,14 @@ function writeStorage(key: string, value: string) {
   }
 }
 
+function removeStorage(key: string) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Stockage indisponible : rien à effacer.
+  }
+}
+
 function readPrefs(key: string): Prefs {
   try {
     const parsed = JSON.parse(readStorage(key) ?? "null") as Partial<Prefs> | null;
@@ -44,19 +54,27 @@ function readPrefs(key: string): Prefs {
   return DEFAULT_PREFS;
 }
 
-// État de tri et de filtres d'une liste. Le tri est mémorisé sous `storageKey`, pas les filtres.
-export function useWatchlistBrowser(items: OverviewItem[], storageKey: string) {
+// État de tri et de filtres d'une liste. Le tri est mémorisé sous `storageKey` ; les filtres
+// (hors recherche texte) sous `filtersKey`, s'il est fourni.
+export function useWatchlistBrowser(items: OverviewItem[], storageKey: string, filtersKey?: string) {
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [query, setQuery] = useState("");
-  const [type, setType] = useState<TypeFilter>("");
-  const [director, setDirector] = useState("");
-  const [genre, setGenre] = useState("");
-  const [atHomeOnly, setAtHomeOnly] = useState(false);
+  const [saved, setSaved] = useState<SavedWatchlistFilters>(NO_SAVED_FILTERS);
 
   // Lecture après l'hydratation, pour que le rendu serveur et client concordent.
   useEffect(() => {
     setPrefs(readPrefs(storageKey));
   }, [storageKey]);
+
+  useEffect(() => {
+    if (filtersKey) setSaved(parseSavedFilters(readStorage(filtersKey)));
+  }, [filtersKey]);
+
+  function updateFilters(patch: Partial<SavedWatchlistFilters>) {
+    const next = { ...saved, ...patch };
+    setSaved(next);
+    if (filtersKey) writeStorage(filtersKey, JSON.stringify(next));
+  }
 
   function updatePrefs(next: Prefs) {
     setPrefs(next);
@@ -64,6 +82,7 @@ export function useWatchlistBrowser(items: OverviewItem[], storageKey: string) {
   }
 
   const facets = useMemo(() => watchlistFacets(items), [items]);
+  const { type, director, genre, atHomeOnly } = useMemo(() => applicableFilters(saved, facets), [saved, facets]);
 
   const visible = useMemo(() => {
     const filtered = filterWatchlist(items, {
@@ -90,19 +109,17 @@ export function useWatchlistBrowser(items: OverviewItem[], storageKey: string) {
     query,
     setQuery,
     type,
-    setType,
+    setType: (type: SavedWatchlistFilters["type"]) => updateFilters({ type }),
     director,
-    setDirector,
+    setDirector: (director: string) => updateFilters({ director }),
     genre,
-    setGenre,
+    setGenre: (genre: string) => updateFilters({ genre }),
     atHomeOnly,
-    setAtHomeOnly,
+    setAtHomeOnly: (atHomeOnly: boolean) => updateFilters({ atHomeOnly }),
     reset: () => {
       setQuery("");
-      setType("");
-      setDirector("");
-      setGenre("");
-      setAtHomeOnly(false);
+      setSaved(NO_SAVED_FILTERS);
+      if (filtersKey) removeStorage(filtersKey);
     },
   };
 }
@@ -147,6 +164,11 @@ export function WatchlistToolbar({
         <span className="muted toolbar-count" aria-live="polite">
           {filtersActive ? `${visible.length} sur ${total} titres` : `${total} ${total > 1 ? "titres" : "titre"}`}
         </span>
+        {filtersActive && (
+          <button type="button" className="link-button toolbar-reset" onClick={browser.reset}>
+            Réinitialiser les filtres
+          </button>
+        )}
         <button
           type="button"
           className="toolbar-toggle"
@@ -239,11 +261,6 @@ export function WatchlistToolbar({
               <input type="checkbox" checked={notes.show} onChange={(event) => notes.onChange(event.target.checked)} />
               Afficher les notes
             </label>
-          )}
-          {filtersActive && (
-            <button type="button" className="link-button" onClick={browser.reset}>
-              Réinitialiser
-            </button>
           )}
         </div>
       </div>

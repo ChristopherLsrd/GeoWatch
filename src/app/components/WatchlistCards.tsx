@@ -12,7 +12,7 @@ import { useWatchlistBrowser, WatchlistToolbar } from "./WatchlistToolbar";
 export function WatchlistCards() {
   const { state } = useWatchlist();
   const items = state.kind === "ready" ? state.items : [];
-  const browser = useWatchlistBrowser(items, "geowatch:sort:home");
+  const browser = useWatchlistBrowser(items, "geowatch:sort:home", "geowatch:filters:home");
 
   if (state.kind === "loading") return null;
 

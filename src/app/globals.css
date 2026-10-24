@@ -935,7 +935,8 @@ button.ghost.link-accent:hover:not(:disabled) { color: var(--accent-hover); }
 /* Barre de tri et de filtres de la liste à voir */
 .toolbar { margin: 14px 0 0; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: grid; gap: 12px; }
 .page .toolbar { margin: 0; padding: 16px; }
-.toolbar-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toolbar-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.toolbar-reset { margin-left: auto; }
 .toolbar-count { font-family: var(--font-mono), ui-monospace, monospace; font-size: 13px; }
 .toolbar-toggle { display: inline-flex; align-items: center; gap: 8px; }
 .toolbar-toggle svg { width: 18px; height: 18px; }
