@@ -30,41 +30,63 @@ query SondeUrl($fullPath: String!, $country: Country!, $language: Language!) {
   }
 }`;
 
-async function timed<T>(fn: () => Promise<T>): Promise<{ ms: number } & ({ ok: true; result: T } | { ok: false; error: string })> {
+// `ok` = la source a répondu utilement ; une exception donne ok: false avec l'erreur.
+async function timed(fn: () => Promise<{ ok: boolean } & Record<string, unknown>>) {
   const start = performance.now();
   try {
     const result = await fn();
-    return { ok: true, ms: Math.round(performance.now() - start), result };
+    return { ...result, ms: Math.round(performance.now() - start) };
   } catch (error) {
     return { ok: false, ms: Math.round(performance.now() - start), error: String(error) };
   }
 }
 
+const MAX_HOPS = 3;
+
+function estLetterboxd(url: URL) {
+  return LETTERBOXD_HOSTS.has(url.hostname.replace(/^www\./, ""));
+}
+
 async function letterboxd(url: string) {
   return timed(async () => {
-    let response = await fetch(url, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    const redirection = response.headers.get("location");
-    if (redirection) {
-      const target = new URL(redirection, url);
-      if (!LETTERBOXD_HOSTS.has(target.hostname.replace(/^www\./, ""))) throw new Error(`redirection hors Letterboxd : ${target}`);
-      response = await fetch(target, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const hops: { url: string; status: number }[] = [];
+    let current = new URL(url);
+    let response: Response;
+    for (let i = 0; ; i++) {
+      response = await fetch(current, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+      hops.push({ url: current.toString(), status: response.status });
+      const location = response.headers.get("location");
+      if (!location || response.status < 300 || response.status >= 400) break;
+      if (i >= MAX_HOPS) throw new Error(`plus de ${MAX_HOPS} redirections`);
+      const target = new URL(location, current);
+      if (!estLetterboxd(target)) throw new Error(`redirection hors Letterboxd : ${target}`);
+      current = target;
     }
     const html = await response.text();
+    const titre = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? null;
+    const cloudflare = response.status === 403 || response.status === 503 || /^just a moment/i.test(titre ?? "") || html.includes("cf-chl-");
     return {
+      ok: response.status === 200 && !cloudflare,
       status: response.status,
-      redirection,
-      finalUrl: response.url || redirection,
+      hops,
+      titre,
       tmdbId: html.match(/data-tmdb-id="(\d+)"/)?.[1] ?? null,
       tmdbType: html.match(/data-tmdb-type="(\w+)"/)?.[1] ?? null,
       imdbId: html.match(/imdb\.com\/title\/(tt\d+)/)?.[1] ?? null,
-      cloudflare: /cf-chl|challenge-platform|Just a moment/i.test(html),
+      cloudflare,
       taille: html.length,
     };
   });
 }
 
 async function justwatch(client: JustWatchClient, fullPath: string) {
-  return timed(() => client.postAllowingErrors({ query: URL_V2, variables: { fullPath, country: "FR", language: "fr" } }));
+  return timed(async () => {
+    const { data, errors } = await client.postAllowingErrors<{ urlV2: { node: unknown } | null }>({
+      query: URL_V2,
+      variables: { fullPath, country: "FR", language: "fr" },
+    });
+    return { ok: !errors && data?.urlV2?.node != null, errors, node: data?.urlV2?.node ?? null };
+  });
 }
 
 async function tmdb(imdbId: string) {
@@ -72,6 +94,7 @@ async function tmdb(imdbId: string) {
     const apiKey = process.env.TMDB_API_KEY;
     if (!apiKey) throw new Error("TMDB_API_KEY absente");
     const response = await tmdbGet(apiKey, fetch, `/find/${imdbId}`, { external_source: "imdb_id", language: "fr-FR" });
+    if (!response.ok) return { ok: false, status: response.status, corps: (await response.text()).slice(0, 300) };
     const json = await response.json();
     const pick = (r: { id: number; title?: string; name?: string; original_title?: string; original_name?: string; release_date?: string; first_air_date?: string }) => ({
       id: r.id,
@@ -79,7 +102,7 @@ async function tmdb(imdbId: string) {
       original: r.original_title ?? r.original_name,
       date: r.release_date ?? r.first_air_date,
     });
-    return { status: response.status, films: (json.movie_results ?? []).map(pick), series: (json.tv_results ?? []).map(pick) };
+    return { ok: true, status: response.status, films: (json.movie_results ?? []).map(pick), series: (json.tv_results ?? []).map(pick) };
   });
 }
 
