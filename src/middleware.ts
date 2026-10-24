@@ -33,6 +33,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les fichiers statiques de Next.js, le favicon (icon.svg) et le logo TMDB du pied de page (visible sur la page de connexion).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|tmdb-logo.svg).*)"],
+  // Tout sauf les fichiers statiques de Next.js, le favicon (icon.svg), le logo TMDB du pied de page (visible sur la page de connexion),
+  // et le manifeste PWA et ses icônes, que Chrome télécharge sans cookies.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|tmdb-logo.svg|manifest.webmanifest|icons/).*)"],
 };
