@@ -21,6 +21,3 @@ Test du 2026-10-24 (les 40 films les plus populaires en FR, BE et CA) :
 - HBO Max : presque toujours renseignée (11 sur 11 en FR, 18 sur 18 en BE) ; Prime Video et Disney+ : parfois (2 ou 3 sur 9) ; Netflix, Canal+, Apple TV, Crave et Paramount+ : jamais.
 
 À reprendre si la couverture s'améliore : refaire la même mesure avant de construire quoi que ce soit.
-
-## Autres
-- [ ] **Licence du projet** : choisir la licence (ISC indiquée par défaut dans `package.json`, MIT, ou aucune, c'est-à-dire tous droits réservés) et ajouter le fichier `LICENSE` et une section au README. Le README crédite déjà la police des drapeaux (Twemoji, CC-BY 4.0).
