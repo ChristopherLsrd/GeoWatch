@@ -8,6 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "GeoWatch",
     description: "Où regarder un film ou une série, dans quels pays et dans quelles langues.",
     lang: "fr",
+    id: "/",
     start_url: "/",
     display: "standalone",
     background_color: "#0d1015",
