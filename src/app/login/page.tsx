@@ -28,7 +28,7 @@ export default function LoginPage() {
     });
     if (response.ok) {
       const next = new URLSearchParams(window.location.search).get("next");
-      window.location.assign(next?.startsWith("/") && !next.startsWith("//") ? next : "/");
+      window.location.assign(next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/");
       return;
     }
     const body = await response.json().catch(() => ({}));
