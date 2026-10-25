@@ -52,6 +52,12 @@ describe("copie locale de la liste à voir", () => {
     expect(JSON.parse(storage.data.get(WATCHLIST_STORAGE_KEY)!).v).toBe(1);
   });
 
+  it("normalise priceDrop absent des anciennes copies", () => {
+    const storage = new MemoryStorage();
+    writeLocalWatchlist(storage, [item("tm1")]);
+    expect(readLocalWatchlist(storage)?.[0].priceDrop).toBeNull();
+  });
+
   it("ignore une copie absente, illisible ou d'un autre format", () => {
     const storage = new MemoryStorage();
     expect(readLocalWatchlist(storage)).toBeNull();
@@ -94,6 +100,13 @@ describe("mergeItems", () => {
     const [merged] = mergeItems([local], [update]);
     expect(merged.note).toBe("nouvelle");
     expect(merged.availableAtHome).toEqual([]);
+  });
+
+  it("copie la pastille : la vérification peut l'ajouter ou l'effacer", () => {
+    const drop = { value: 3.99, previous: 4.99, currency: "EUR", percent: 20, platformName: "Apple TV Store", monetizationType: "RENT" as const, day: "2026-10-24" };
+    const withDrop = { ...item("tm1"), priceDrop: drop };
+    expect(mergeItems([item("tm1")], [withDrop])[0].priceDrop).toEqual(drop);
+    expect(mergeItems([withDrop], [{ ...item("tm1", [{ platform: { id: "8", name: "Netflix", iconUrl: null }, country: "FR" }]), priceDrop: null }])[0].priceDrop).toBeNull();
   });
 
   it("ignore un élément retiré entre-temps", () => {

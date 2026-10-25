@@ -10,11 +10,12 @@ import type { AlertRepository } from "@/domain/ports/AlertRepository";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
 import type { PreferencesRepository } from "@/domain/ports/PreferencesRepository";
 import type { PriceHistoryRepository } from "@/domain/ports/PriceHistoryRepository";
-import { DEFAULT_PRICE_THRESHOLD, type PriceThreshold } from "@/domain/PriceHistory";
+import type { PriceThreshold } from "@/domain/PriceHistory";
 import type { SubscriptionRepository } from "@/domain/ports/SubscriptionRepository";
 import type { WatchlistRepository } from "@/domain/ports/WatchlistRepository";
 import type { WatchStatusRepository } from "@/domain/ports/WatchStatusRepository";
 import type { GetTitleAvailability } from "../catalog/GetTitleAvailability";
+import { readPriceThreshold } from "../prices/readPriceThreshold";
 import { currentStatus, detectChanges } from "./detectChanges";
 import { trackPrices } from "./trackPrices";
 
@@ -51,7 +52,7 @@ export class DailyCheck {
     const [items, subscriptions, threshold] = await Promise.all([
       this.watchlist.list(),
       this.subscriptions.list(),
-      this.threshold(),
+      readPriceThreshold(this.preferences),
     ]);
     const report: DailyCheckReport = { checked: 0, total: items.length, alerts: 0, stoppedEarly: null };
 
@@ -78,7 +79,7 @@ export class DailyCheck {
   // Vérifie un seul titre (par exemple à son ajout dans la liste), sans attendre le cron.
   // Les abonnements peuvent être fournis pour éviter de les relire à chaque titre.
   async checkTitle(title: Title, subscriptions?: Subscription[]): Promise<void> {
-    await this.check(title, subscriptions ?? (await this.subscriptions.list()), await this.threshold());
+    await this.check(title, subscriptions ?? (await this.subscriptions.list()), await readPriceThreshold(this.preferences));
   }
 
   // Renvoie le nombre de nouveautés signalées.
@@ -103,15 +104,6 @@ export class DailyCheck {
     } catch (error) {
       console.error(error);
       return 0;
-    }
-  }
-
-  private async threshold(): Promise<PriceThreshold> {
-    try {
-      return (await this.preferences.get())?.priceDropThreshold ?? DEFAULT_PRICE_THRESHOLD;
-    } catch (error) {
-      console.error(error);
-      return DEFAULT_PRICE_THRESHOLD;
     }
   }
 

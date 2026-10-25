@@ -114,4 +114,21 @@ describe("WatchlistCheck", () => {
     expect(await check.run()).toEqual({ items: [], pending: 0, checked: 0, completed: 0 });
     expect(log).toEqual([]);
   });
+
+  it("ne lit les pastilles que pour les titres traités", async () => {
+    const asked: string[][] = [];
+    const drops = { forTitles: async (ids?: string[]) => (asked.push(ids ?? []), new Map()) } as never;
+    const build = (items: WatchlistItem[]) =>
+      new WatchlistCheck(
+        { list: async () => items, completeDetails: async () => true } as unknown as Watchlist,
+        { get: async () => null, getMany: async () => [], list: async () => [status("tm1", ["FR:8"])], save: async () => {} },
+        { list: async () => subscriptions, add: async () => {}, remove: async () => {} },
+        async () => {},
+        drops,
+      );
+    await build([item("tm1")]).run();
+    expect(asked).toEqual([]);
+    await build([item("tm2")]).run();
+    expect(asked).toEqual([["tm2"]]);
+  });
 });
