@@ -74,7 +74,7 @@ button.primary:hover:not(:disabled) { background: var(--accent-hover); border-co
 button.ghost { background: transparent; border-color: transparent; color: var(--muted); font-weight: 500; font-size: 14px; padding: 0 8px; }
 button.ghost:hover:not(:disabled) { border-color: transparent; color: var(--text); }
 
-input[type="text"], input[type="search"], input[type="password"], select {
+input[type="text"], input[type="search"], input[type="password"], input[type="number"], select {
   height: 48px;
   padding: 0 14px;
   border: 1px solid var(--border-strong);
@@ -93,7 +93,7 @@ select {
   cursor: pointer;
 }
 select option { background: var(--field); color: var(--text); font-weight: 400; }
-input[type="text"]:focus, input[type="search"]:focus, input[type="password"]:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
+input[type="text"]:focus, input[type="search"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
 input::placeholder { color: var(--faint); }
 input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 /* Case dessinée à la main : le rendu d'accent-color varie selon les navigateurs. */
@@ -888,6 +888,10 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .pref-label { font-weight: 600; }
 .pref-help { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
 .pref-field select { width: 100%; }
+.pref-threshold { display: flex; flex-direction: column; gap: 12px; }
+.pref-threshold-item { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
+.pref-threshold-input { display: flex; align-items: center; gap: 8px; }
+.pref-threshold-input input { width: 100%; min-width: 0; }
 .pref-hint { display: flex; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-2); }
 .pref-hint svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--faint); }
 .pref-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; background: var(--surface-foot); border-top: 1px solid var(--border); }
@@ -900,6 +904,8 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
   .pref-icon { grid-row: span 3; width: 44px; height: 44px; margin-bottom: 0; }
   .pref-foot { padding: 16px 20px; }
   .pref-foot button.primary { width: auto; }
+  .pref-threshold { flex-direction: row; gap: 16px; }
+  .pref-threshold-item { flex: 1; }
 }
 .pref-note { font-weight: 500; color: var(--accent); }
 .filter-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

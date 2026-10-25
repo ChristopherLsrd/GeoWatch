@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  ArrowTrendingDownIcon,
   CheckCircleIcon,
   ChatBubbleBottomCenterTextIcon,
   InformationCircleIcon,
@@ -11,8 +12,26 @@ import { PREFERENCE_LANGUAGES } from "@/config/languages";
 import { languageName } from "@/domain/Language";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
 import { apiFetch } from "./apiFetch";
+import { parsePriceThreshold } from "./priceThresholdInput";
 
-type Saved = { audioLanguage: string; subtitleLanguage: string };
+type Saved = { audioLanguage: string; subtitleLanguage: string; amount: string; percent: string };
+type PreferencesBody = {
+  preferences: {
+    audioLanguage: string | null;
+    subtitleLanguage: string | null;
+    priceDropThreshold: { amount: number; percent: number };
+  };
+};
+
+// Valeurs des champs à partir de la réponse du serveur (« 0.5 » est affiché « 0,5 » par le champ numérique).
+function toSaved(body: PreferencesBody): Saved {
+  return {
+    audioLanguage: body.preferences.audioLanguage ?? "",
+    subtitleLanguage: body.preferences.subtitleLanguage ?? "",
+    amount: String(body.preferences.priceDropThreshold.amount),
+    percent: String(body.preferences.priceDropThreshold.percent),
+  };
+}
 type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "error" };
 
 const byName = (a: string, b: string) => languageName(a).localeCompare(languageName(b), "fr");
@@ -25,9 +44,11 @@ function optionsFor(current: string): string[] {
 
 export function PreferencesView() {
   const [load, setLoad] = useState<LoadState>({ kind: "loading" });
-  const [saved, setSaved] = useState<Saved>({ audioLanguage: "", subtitleLanguage: "" });
+  const [saved, setSaved] = useState<Saved>({ audioLanguage: "", subtitleLanguage: "", amount: "", percent: "" });
   const [audio, setAudio] = useState("");
   const [subtitles, setSubtitles] = useState("");
+  const [amount, setAmount] = useState("");
+  const [percent, setPercent] = useState("");
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -37,17 +58,14 @@ export function PreferencesView() {
       try {
         const response = await apiFetch("/api/preferences", controller.signal);
         if (!response.ok) throw new Error(String(response.status));
-        const body = (await response.json()) as {
-          preferences: { audioLanguage: string | null; subtitleLanguage: string | null };
-        };
+        const body = (await response.json()) as PreferencesBody;
         if (controller.signal.aborted) return;
-        const value = {
-          audioLanguage: body.preferences.audioLanguage ?? "",
-          subtitleLanguage: body.preferences.subtitleLanguage ?? "",
-        };
+        const value = toSaved(body);
         setSaved(value);
         setAudio(value.audioLanguage);
         setSubtitles(value.subtitleLanguage);
+        setAmount(value.amount);
+        setPercent(value.percent);
         setLoad({ kind: "ready" });
       } catch {
         if (!controller.signal.aborted) setLoad({ kind: "error" });
@@ -56,33 +74,36 @@ export function PreferencesView() {
     return () => controller.abort();
   }, []);
 
-  const changed = audio !== saved.audioLanguage || subtitles !== saved.subtitleLanguage;
+  const changed =
+    audio !== saved.audioLanguage || subtitles !== saved.subtitleLanguage || amount !== saved.amount || percent !== saved.percent;
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setMessage(null);
+    const threshold = parsePriceThreshold(amount, percent);
+    if (!threshold) {
+      setMessage({ ok: false, text: "Seuil de baisse invalide." });
+      return;
+    }
     setSending(true);
     try {
       const response = await apiFetch("/api/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audioLanguage: audio, subtitleLanguage: subtitles }),
+        body: JSON.stringify({ audioLanguage: audio, subtitleLanguage: subtitles, priceDropThreshold: threshold }),
       });
       if (response.status === 400) {
-        setMessage({ ok: false, text: "Langue invalide." });
+        const error = (await response.json().catch(() => null)) as { message?: string } | null;
+        setMessage({ ok: false, text: error?.message ?? "Préférences invalides." });
         return;
       }
       if (!response.ok) throw new Error(String(response.status));
-      const body = (await response.json()) as {
-        preferences: { audioLanguage: string | null; subtitleLanguage: string | null };
-      };
-      const value = {
-        audioLanguage: body.preferences.audioLanguage ?? "",
-        subtitleLanguage: body.preferences.subtitleLanguage ?? "",
-      };
+      const value = toSaved((await response.json()) as PreferencesBody);
       setSaved(value);
       setAudio(value.audioLanguage);
       setSubtitles(value.subtitleLanguage);
+      setAmount(value.amount);
+      setPercent(value.percent);
       setMessage({ ok: true, text: "Préférences enregistrées" });
     } catch {
       setMessage({ ok: false, text: "Impossible d'enregistrer les préférences." });
@@ -145,6 +166,33 @@ export function PreferencesView() {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+      <div className="pref-field">
+        <span className="pref-icon">
+          <ArrowTrendingDownIcon aria-hidden="true" />
+        </span>
+        <span className="pref-label" id="pref-drop-label">
+          Alertes de prix
+        </span>
+        <p className="pref-help">
+          Une baisse de location ou d&apos;achat (France, HD et 4K) est signalée si elle atteint l&apos;un des deux seuils. 0 : toute baisse.
+        </p>
+        <div className="pref-threshold" role="group" aria-labelledby="pref-drop-label">
+          <label className="pref-threshold-item" htmlFor="pref-amount">
+            <span>Baisse d&apos;au moins</span>
+            <span className="pref-threshold-input">
+              <input id="pref-amount" type="number" inputMode="decimal" min={0} max={100} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <span aria-hidden="true">€</span>
+            </span>
+          </label>
+          <label className="pref-threshold-item" htmlFor="pref-percent">
+            <span>ou d&apos;au moins</span>
+            <span className="pref-threshold-input">
+              <input id="pref-percent" type="number" inputMode="decimal" min={0} max={100} step="1" value={percent} onChange={(e) => setPercent(e.target.value)} />
+              <span aria-hidden="true">%</span>
+            </span>
+          </label>
         </div>
       </div>
       <div className="pref-foot">
