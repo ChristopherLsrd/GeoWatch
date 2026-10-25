@@ -67,10 +67,17 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     list: async () => [...statuses.values()],
     save: async (status) => void statuses.set(status.titleId, status),
   };
+  let failAlertsOnce = false;
   const stored: Alert[] = [];
   const alertRepo: AlertRepository = {
     list: async () => stored,
-    add: async (alerts) => void stored.push(...alerts),
+    add: async (alerts) => {
+      if (failAlertsOnce) {
+        failAlertsOnce = false;
+        throw new Error("Mongo indisponible");
+      }
+      stored.push(...alerts);
+    },
     remove: async () => {},
     clear: async () => {},
   };
@@ -105,6 +112,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     histories,
     setNow: (date: Date) => (now = date),
     failPrices: () => (failPrices = true),
+    failAlertsOnce: () => (failAlertsOnce = true),
     statuses,
   };
 }
@@ -163,5 +171,20 @@ describe("DailyCheck", () => {
     t.failPrices();
     expect(await t.check.execute()).toEqual({ checked: 2, total: 2, alerts: 0, stoppedEarly: null });
     expect(t.statuses.size).toBe(2);
+  });
+
+  it("n'enregistre pas l'historique si l'ajout de l'alerte échoue, la baisse est re-détectée", async () => {
+    const t = setup([item("tm1")], []);
+    t.setOffers({ tm1: [rent(4.99)] });
+    await t.check.execute();
+
+    t.setNow(new Date("2026-10-18T05:00:00Z"));
+    t.setOffers({ tm1: [rent(3.99)] });
+    t.failAlertsOnce();
+    expect((await t.check.execute()).alerts).toBe(0);
+    expect([...t.histories.values()][0].points.map((p) => p.value)).toEqual([4.99]);
+
+    expect((await t.check.execute()).alerts).toBe(1);
+    expect(t.stored.map((a) => a.id)).toEqual(["tm1:PRICE_DROP:FR:2:RENT:3.99"]);
   });
 });

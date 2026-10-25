@@ -92,13 +92,13 @@ export class DailyCheck {
     return alerts.length + (await this.followPrices(title, offers, current.atHome.length > 0, threshold));
   }
 
-  // Suivi des prix, après l'état et les alertes : une erreur est journalisée sans arrêter la vérification.
+  // Suivi des prix : alertes avant historique, pour qu'un échec laisse la baisse re-détectable. Une erreur est journalisée sans arrêter la vérification.
   private async followPrices(title: Title, offers: Offer[], atHome: boolean, threshold: PriceThreshold): Promise<number> {
     try {
       const histories = await this.prices.listForTitles([title.id]);
       const { changed, alerts } = trackPrices({ title, offers, histories, atHome, threshold, now: this.clock() });
-      await this.prices.save(changed);
       if (alerts.length > 0) await this.alerts.add(alerts);
+      await this.prices.save(changed);
       return alerts.length;
     } catch (error) {
       console.error(error);
