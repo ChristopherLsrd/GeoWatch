@@ -7,6 +7,7 @@ import type { SubscriptionRepository } from "@/domain/ports/SubscriptionReposito
 import type { WatchStatusRepository } from "@/domain/ports/WatchStatusRepository";
 import type { Subscription } from "@/domain/Subscription";
 import type { Title } from "@/domain/Title";
+import type { PriceDrops } from "../prices/PriceDrops";
 import type { Watchlist } from "./Watchlist";
 import { needsWork, toOverviewItems, type WatchlistOverviewItem } from "./WatchlistOverview";
 
@@ -30,6 +31,7 @@ export class WatchlistCheck {
     private readonly subscriptions: SubscriptionRepository,
     // Vérifie un titre et enregistre son état (DailyCheck.checkTitle).
     private readonly checkTitle: (title: Title, subscriptions: Subscription[]) => Promise<void>,
+    private readonly drops?: PriceDrops,
   ) {}
 
   async run(): Promise<WatchlistCheckResult> {
@@ -61,10 +63,15 @@ export class WatchlistCheck {
       done.push(item);
     }
 
-    const fresh = new Map((await this.statuses.getMany(done.map((i) => i.title.id))).map((s) => [s.titleId, s]));
+    const doneIds = done.map((i) => i.title.id);
+    const [freshList, drops] = await Promise.all([
+      this.statuses.getMany(doneIds),
+      doneIds.length > 0 ? this.drops?.forTitles(doneIds) : undefined,
+    ]);
+    const fresh = new Map(freshList.map((s) => [s.titleId, s]));
     for (const [id, s] of fresh) statuses.set(id, s);
     return {
-      items: toOverviewItems(done, statuses, subscriptions),
+      items: toOverviewItems(done, statuses, subscriptions, drops ?? new Map()),
       pending: items.filter((item) => needsWork(item, statuses.get(item.title.id))).length,
       checked,
       completed,

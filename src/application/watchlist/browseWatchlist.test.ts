@@ -42,6 +42,7 @@ function item(
     note: options.note ?? "",
     addedAt: new Date(options.added ?? "2026-10-01"),
     availableAtHome: options.atHome ? [netflix] : [],
+    priceDrop: null,
   };
 }
 

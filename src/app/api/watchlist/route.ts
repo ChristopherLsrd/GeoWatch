@@ -1,5 +1,6 @@
 // GET  /api/watchlist                      → { items: WatchlistOverviewItem[], pending } (du plus récent au plus ancien,
-//                                            avec le résumé de la fiche et le badge « disponible chez moi » ;
+//                                            avec le résumé de la fiche et le badge « disponible chez moi » et la pastille
+//                                            de baisse de prix (priceDrop) ;
 //                                            pending : titres à compléter par POST /api/watchlist/check)
 // POST /api/watchlist { titleId: "tm92641" } → 201 { item } (200 si déjà présent)
 // Réponse avec l'en-tête Server-Timing (mongo, justwatch, total).

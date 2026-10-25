@@ -19,6 +19,9 @@ import {
 import { languageName } from "@/domain/Language";
 import { MONETIZATION_LABELS, MONETIZATION_TYPES, type MonetizationType } from "@/domain/MonetizationType";
 import type { Offer } from "@/domain/Offer";
+import type { PriceHistoryView } from "@/application/prices/TitlePrices";
+import { PriceHistoryBlock } from "./PriceHistoryBlock";
+import { selectPriceHistories, type SelectedPriceHistory } from "./priceHistorySelection";
 
 const SUMMARY_LIMIT = 2;
 const NOT_PROVIDED = "non renseigné";
@@ -58,6 +61,7 @@ export function OfferResults({
   defaultAudioLanguage,
   defaultSubtitleLanguage,
   defaultAudioLabel = "préférences",
+  priceHistories = [],
 }: {
   offers: Offer[];
   complete: boolean;
@@ -67,6 +71,8 @@ export function OfferResults({
   defaultSubtitleLanguage?: string | null;
   // Mention affichée près du filtre audio quand il vient de la valeur par défaut (ex. « VO »).
   defaultAudioLabel?: string;
+  // Historiques de prix du titre (liste à voir) ; vide hors de la liste.
+  priceHistories?: PriceHistoryView[];
 }) {
   const [types, setTypes] = useState<MonetizationType[]>([]);
   const [platformIds, setPlatformIds] = useState<string[]>([]);
@@ -335,6 +341,16 @@ export function OfferResults({
                     key={key}
                     row={row}
                     group={group}
+                    priceHistories={
+                      expanded.has(key)
+                        ? selectPriceHistories(
+                            priceHistories,
+                            row.country,
+                            group.platforms.map((p) => p.id),
+                            row.offers,
+                          )
+                        : []
+                    }
                     open={expanded.has(key)}
                     onToggle={() => toggleIn(setExpanded, key)}
                   />
@@ -363,11 +379,13 @@ export function OfferResults({
 function CountryLine({
   row,
   group,
+  priceHistories,
   open,
   onToggle,
 }: {
   row: CountryRow;
   group: PlatformGroup;
+  priceHistories: SelectedPriceHistory[];
   open: boolean;
   onToggle: () => void;
 }) {
@@ -401,6 +419,9 @@ function CountryLine({
       </button>
       {open && (
         <div className="detail">
+          {priceHistories.length > 0 && (
+            <PriceHistoryBlock histories={priceHistories} multiVariant={multiVariant} />
+          )}
           {row.offers.map((offer, index) => {
             const link = offer.deepLinkUrl ?? offer.url;
             return (

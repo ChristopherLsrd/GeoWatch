@@ -2,6 +2,7 @@ import { MongoClient } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { InvalidPreferencesError, UserPreferences } from "@/application/preferences/UserPreferences";
+import { DEFAULT_PRICE_THRESHOLD } from "@/domain/PriceHistory";
 import { MongoPreferencesRepository } from "./MongoPreferencesRepository";
 
 let server: MongoMemoryServer;
@@ -21,17 +22,33 @@ const setup = (dbName: string) => new UserPreferences(new MongoPreferencesReposi
 
 describe("UserPreferences avec Mongo", () => {
   it("renvoie l'absence de préférence par défaut", async () => {
-    expect(await setup("p1").get()).toEqual({ audioLanguage: null, subtitleLanguage: null });
+    expect(await setup("p1").get()).toEqual({
+      audioLanguage: null,
+      subtitleLanguage: null,
+      priceDropThreshold: DEFAULT_PRICE_THRESHOLD,
+    });
   });
 
   it("enregistre et remplace les préférences", async () => {
     const preferences = setup("p2");
     await preferences.update({ audioLanguage: "fr", subtitleLanguage: "pt-BR" });
-    expect(await preferences.get()).toEqual({ audioLanguage: "fr", subtitleLanguage: "pt-BR" });
+    expect(await preferences.get()).toEqual({
+      audioLanguage: "fr",
+      subtitleLanguage: "pt-BR",
+      priceDropThreshold: DEFAULT_PRICE_THRESHOLD,
+    });
     await preferences.update({ audioLanguage: "original", subtitleLanguage: null });
-    expect(await preferences.get()).toEqual({ audioLanguage: "original", subtitleLanguage: null });
+    expect(await preferences.get()).toEqual({
+      audioLanguage: "original",
+      subtitleLanguage: null,
+      priceDropThreshold: DEFAULT_PRICE_THRESHOLD,
+    });
     await preferences.update({ audioLanguage: "", subtitleLanguage: null });
-    expect(await preferences.get()).toEqual({ audioLanguage: null, subtitleLanguage: null });
+    expect(await preferences.get()).toEqual({
+      audioLanguage: null,
+      subtitleLanguage: null,
+      priceDropThreshold: DEFAULT_PRICE_THRESHOLD,
+    });
   });
 
   it("refuse une langue invalide", async () => {
@@ -42,5 +59,28 @@ describe("UserPreferences avec Mongo", () => {
     await expect(preferences.update({ audioLanguage: "fr", subtitleLanguage: 3 })).rejects.toThrow(
       InvalidPreferencesError,
     );
+  });
+
+  it("enregistre le seuil de baisse et garde les champs non envoyés", async () => {
+    const preferences = setup("p4");
+    await preferences.update({ audioLanguage: "fr", subtitleLanguage: null });
+    await preferences.update({ priceDropThreshold: { amount: 1.234, percent: 15 } });
+    expect(await preferences.get()).toEqual({
+      audioLanguage: "fr",
+      subtitleLanguage: null,
+      priceDropThreshold: { amount: 1.23, percent: 15 },
+    });
+  });
+
+  it("refuse un seuil invalide", async () => {
+    const preferences = setup("p5");
+    for (const priceDropThreshold of [null, { amount: -1, percent: 10 }, { amount: 1, percent: 101 }, { amount: "1", percent: 10 }, { amount: 1 }]) {
+      await expect(preferences.update({ priceDropThreshold })).rejects.toThrow(InvalidPreferencesError);
+    }
+  });
+
+  it("donne le seuil par défaut aux préférences enregistrées avant son ajout", async () => {
+    await client.db("p6").collection("preferences").insertOne({ _id: "user" as never, audioLanguage: "fr", subtitleLanguage: null });
+    expect(await setup("p6").get()).toEqual({ audioLanguage: "fr", subtitleLanguage: null, priceDropThreshold: DEFAULT_PRICE_THRESHOLD });
   });
 });

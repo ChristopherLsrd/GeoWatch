@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { PencilIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { yearWithRuntime } from "./format";
+import { PriceDropBadge } from "./PriceDropBadge";
 import { directorsLabel, HomeBadge, type OverviewItem } from "./HomeBadge";
 import { PosterScores } from "./PosterScores";
 import { useWatchlist } from "./useWatchlist";
@@ -55,6 +56,7 @@ function WatchItem({
             {directors && <p className="watch-meta">De {directors}</p>}
             <div className="watch-badges">
               <HomeBadge item={item} inline />
+              <PriceDropBadge drop={item.priceDrop} inline />
               <PosterScores imdbScore={item.details?.imdbScore} tmdbScore={item.details?.tmdbScore} inline />
             </div>
           </div>

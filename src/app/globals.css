@@ -497,6 +497,17 @@ fieldset.filter-group { min-width: 0; margin: 0; padding: 0; border: 0; }
 .country-chevron { width: 18px; height: 18px; color: var(--faint); }
 .cell-label { display: none; color: var(--faint); }
 .detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 10px; padding: 4px 18px 18px; background: var(--surface-foot); }
+.price-history { grid-column: 1 / -1; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.price-history-title { margin-bottom: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); }
+.price-history-line { margin-top: 8px; font-size: 14px; }
+.price-history-range { color: var(--muted); }
+.price-chart { display: block; width: 100%; max-width: 320px; height: auto; margin-top: 6px; }
+.price-chart-point { cursor: pointer; outline: none; }
+.price-chart-hit { fill: transparent; }
+.price-chart-dot { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.price-chart-point.is-selected .price-chart-dot { fill: var(--accent); }
+.price-chart-point:focus-visible .price-chart-dot { stroke: var(--text); stroke-width: 3; }
+.price-chart-caption { margin-top: 2px; font-size: 12.5px; color: var(--faint); }
 .detail-offer { display: flex; flex-direction: column; gap: 6px; padding: 14px; background: var(--field); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
 .detail-offer .badge { margin-right: 6px; padding: 2px 9px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 12.5px; }
 .detail-offer .offer-platform { font-weight: 400; }
@@ -879,6 +890,10 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .pref-label { font-weight: 600; }
 .pref-help { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
 .pref-field select { width: 100%; }
+.pref-threshold { display: flex; flex-direction: column; gap: 12px; }
+.pref-threshold-item { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
+.pref-threshold-input { display: flex; align-items: center; gap: 8px; }
+.pref-threshold-input input { width: 100%; min-width: 0; }
 .pref-hint { display: flex; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-2); }
 .pref-hint svg { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--faint); }
 .pref-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; background: var(--surface-foot); border-top: 1px solid var(--border); }
@@ -891,6 +906,8 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
   .pref-icon { grid-row: span 3; width: 44px; height: 44px; margin-bottom: 0; }
   .pref-foot { padding: 16px 20px; }
   .pref-foot button.primary { width: auto; }
+  .pref-threshold { flex-direction: row; gap: 16px; }
+  .pref-threshold-item { flex: 1; }
 }
 .pref-note { font-weight: 500; color: var(--accent); }
 .filter-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -960,6 +977,13 @@ button.ghost.link-accent:hover:not(:disabled) { color: var(--accent-hover); }
   .toolbar-panel { display: grid; }
 }
 .poster-badge svg { width: 13px; height: 13px; flex: none; }
+/* Pastille « en baisse » : même gabarit que « Chez moi » (classe .poster-badge), en haut à droite, fond vert. */
+.poster-drop {
+  top: 6px;
+  right: 6px;
+  left: auto;
+  background: var(--success);
+}
 
 /* Import Letterboxd */
 .page-head { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }

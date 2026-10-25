@@ -20,7 +20,9 @@ export function readLocalWatchlist(storage: StorageLike | null): OverviewItem[] 
     const raw = storage?.getItem(WATCHLIST_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { v?: unknown; items?: unknown };
-    return parsed?.v === 1 && Array.isArray(parsed.items) ? (parsed.items as OverviewItem[]) : null;
+    if (parsed?.v !== 1 || !Array.isArray(parsed.items)) return null;
+    // Les copies d'avant le suivi des prix n'ont pas `priceDrop`.
+    return (parsed.items as OverviewItem[]).map((item) => ({ ...item, priceDrop: item.priceDrop ?? null }));
   } catch {
     return null;
   }
@@ -42,14 +44,14 @@ export function clearLocalWatchlist(storage: StorageLike | null): void {
   }
 }
 
-// La vérification n'apporte que `details` et `availableAtHome` : le reste de l'élément local (note,
+// La vérification n'apporte que `details`, `availableAtHome` et `priceDrop` : le reste de l'élément local (note,
 // date d'ajout…) est conservé, pour ne pas écraser une note enregistrée pendant l'appel.
 // Un élément absent de la liste courante est ignoré.
 export function mergeItems(current: OverviewItem[], updates: OverviewItem[]): OverviewItem[] {
   const byId = new Map(updates.map((u) => [u.title.id, u]));
   return current.map((item) => {
     const u = byId.get(item.title.id);
-    return u ? { ...item, details: u.details, availableAtHome: u.availableAtHome } : item;
+    return u ? { ...item, details: u.details, availableAtHome: u.availableAtHome, priceDrop: u.priceDrop ?? null } : item;
   });
 }
 

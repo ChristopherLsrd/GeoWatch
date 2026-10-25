@@ -25,4 +25,7 @@ export type Offer = {
   url: string | null;
   // Ouvre directement la lecture sur la plateforme. Absent des offres mises en cache avant son ajout.
   deepLinkUrl?: string | null;
+  // Prix d'avant le dernier changement, et date de ce changement (« 2025-06-09 »), selon JustWatch.
+  // Absent des offres mises en cache avant son ajout.
+  previousPrice?: { value: number; day: string } | null;
 };

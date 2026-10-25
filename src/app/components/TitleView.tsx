@@ -7,6 +7,7 @@ import { availableAtHome, homeOfferLink } from "@/application/catalog/availableA
 import { countryFlag, countryName } from "@/domain/Country";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
 import { languageName } from "@/domain/Language";
+import type { PriceHistoryView } from "@/application/prices/TitlePrices";
 import type { Subscription } from "@/domain/Subscription";
 import type { TitleDetails } from "@/domain/TitleDetails";
 import { AgeRatingSection } from "./AgeRatingSection";
@@ -60,6 +61,8 @@ export function TitleView({ id }: { id: string }) {
   const { offers, checkedAt, status, checkedCountries, missingCountries, totalCountries, retry, refresh } =
     useAvailabilityBatches(id);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [priceHistories, setPriceHistories] = useState<PriceHistoryView[]>([]);
+  const [pricesVersion, setPricesVersion] = useState(0);
   // undefined tant que non chargées ; null si aucune préférence ou échec.
   const [prefs, setPrefs] = useState<{ audio: string | null; subtitles: string | null } | undefined>();
 
@@ -81,6 +84,24 @@ export function TitleView({ id }: { id: string }) {
 
     return () => current.abort();
   }, [id]);
+
+  // Historiques des prix (titres de la liste à voir) ; en cas d'échec, la fiche s'affiche sans.
+  // Relus après un ajout à la liste, qui relève les prix du titre.
+  useEffect(() => {
+    const current = new AbortController();
+    setPriceHistories([]);
+    (async () => {
+      try {
+        const response = await apiFetch(`/api/titles/${encodeURIComponent(id)}/prices`, current.signal);
+        if (!response.ok) return;
+        const body = (await response.json()) as { histories: PriceHistoryView[] };
+        if (!current.signal.aborted) setPriceHistories(body.histories);
+      } catch {
+        // pas d'historique
+      }
+    })();
+    return () => current.abort();
+  }, [id, pricesVersion]);
 
   // Abonnements chargés en parallèle ; en cas d'échec on continue sans badge.
   useEffect(() => {
@@ -161,7 +182,7 @@ export function TitleView({ id }: { id: string }) {
           Impossible de charger le titre.
         </p>
       )}
-      {titleState.kind === "ready" && <TitleHeader title={titleState.title} atHome={atHome} />}
+      {titleState.kind === "ready" && <TitleHeader title={titleState.title} atHome={atHome} onAdded={() => setPricesVersion((version) => version + 1)} />}
 
       {titleState.kind !== "not_found" && (
         <>
@@ -198,6 +219,7 @@ export function TitleView({ id }: { id: string }) {
             defaultAudioLanguage={defaultAudio}
             defaultSubtitleLanguage={defaultSubtitles}
             defaultAudioLabel={wantsOriginal ? "VO" : undefined}
+            priceHistories={priceHistories}
           />
         </>
       )}
@@ -219,7 +241,7 @@ function AtHomeLabel({ subscription }: { subscription: Subscription }) {
 
 type AtHomeEntry = { subscription: Subscription; link: string | null };
 
-function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEntry[] }) {
+function TitleHeader({ title, atHome, onAdded }: { title: TitleDetails; atHome: AtHomeEntry[]; onAdded: () => void }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
@@ -416,6 +438,7 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
           )}
           <WatchlistButton
             titleId={title.id}
+            onAdded={onAdded}
             extraAction={
               trailer ? (
                 <button ref={trailerButtonRef} type="button" onClick={() => setTrailerOpen(true)}>

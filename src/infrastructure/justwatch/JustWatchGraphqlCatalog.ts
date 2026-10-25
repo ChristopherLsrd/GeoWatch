@@ -1,6 +1,7 @@
 // Adaptateur CatalogProvider pour l'API GraphQL non officielle de JustWatch.
 // Requêtes reprises de simple-justwatch-python-api (graphql.py, query.py).
 
+import { parisDay } from "@/domain/CalendarDay";
 import { isCountryCode, type CountryCode } from "@/domain/Country";
 import { isMonetizationType } from "@/domain/MonetizationType";
 import type { Offer, Platform } from "@/domain/Offer";
@@ -82,6 +83,8 @@ fragment TitleOffer on Offer {
   deeplinkURL(platform: WEB)
   audioLanguages
   subtitleLanguages
+  lastChangeRetailPriceValue
+  lastChangeDate
 }`;
 
 type JustWatchTitle = {
@@ -122,6 +125,9 @@ type JustWatchOffer = {
   deeplinkURL: string | null;
   audioLanguages: string[] | null;
   subtitleLanguages: string[] | null;
+  lastChangeRetailPriceValue?: number | null;
+  // « 2025-06-09 », chaîne vide si aucun changement connu.
+  lastChangeDate?: string | null;
 };
 
 export type JustWatchOptions = {
@@ -278,6 +284,26 @@ function cleanUrl(url: string | null | undefined): string | null {
   return url?.replace(/&amp;/g, "&") ?? null;
 }
 
+// Dernier changement de prix connu de JustWatch, pour la location et l'achat seulement.
+// Absent sans prix actuel ni ancien prix (0 € compris), s'il égale le prix actuel, ou sans date exploitable.
+function previousPrice(offer: JustWatchOffer): Offer["previousPrice"] {
+  if (offer.monetizationType !== "RENT" && offer.monetizationType !== "BUY") return null;
+  const current = offer.retailPriceValue;
+  const value = offer.lastChangeRetailPriceValue;
+  if (typeof current !== "number" || current <= 0) return null;
+  if (typeof value !== "number" || value <= 0 || value === current) return null;
+  const day = changeDay(offer.lastChangeDate);
+  return day ? { value, day } : null;
+}
+
+// « 2025-06-09 » tel quel ; un horodatage ISO devient le jour calendaire de Paris.
+function changeDay(date: string | null | undefined): string | null {
+  const text = date ?? "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const time = Date.parse(text);
+  return Number.isNaN(time) ? null : parisDay(new Date(time));
+}
+
 function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
   if (!isMonetizationType(offer.monetizationType)) return null;
   return {
@@ -298,5 +324,6 @@ function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
     url: cleanUrl(offer.standardWebURL),
     // Lien qui ouvre directement la lecture sur la plateforme, quand JustWatch le connaît.
     deepLinkUrl: cleanUrl(offer.deeplinkURL),
+    previousPrice: previousPrice(offer),
   };
 }

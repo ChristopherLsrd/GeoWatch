@@ -8,6 +8,8 @@ import { DailyCheck } from "@/application/daily/DailyCheck";
 import { GetPerson } from "@/application/people/GetPerson";
 import { ImportLetterboxd } from "@/application/import/ImportLetterboxd";
 import { SearchHistory } from "@/application/history/SearchHistory";
+import { PriceDrops } from "@/application/prices/PriceDrops";
+import { TitlePrices } from "@/application/prices/TitlePrices";
 import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
@@ -30,6 +32,7 @@ import { CachedContentAdvisories } from "./mongo/CachedContentAdvisories";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
 import { MongoAvailabilityCache } from "./mongo/MongoAvailabilityCache";
 import { MongoPersonCache } from "./mongo/MongoPersonCache";
+import { MongoPriceHistoryRepository } from "./mongo/MongoPriceHistoryRepository";
 import { MongoPreferencesRepository } from "./mongo/MongoPreferencesRepository";
 import { MongoSearchHistoryRepository } from "./mongo/MongoSearchHistoryRepository";
 import { MongoSubscriptionRepository } from "./mongo/MongoSubscriptionRepository";
@@ -69,7 +72,9 @@ export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const importLetterboxd = new ImportLetterboxd(catalog, watchlist);
 export const subscriptions = new Subscriptions(subscriptionRepository, catalog);
 export const searchHistory = new SearchHistory(new MongoSearchHistoryRepository(getDb));
-export const userPreferences = new UserPreferences(new MongoPreferencesRepository(getDb));
+const preferencesRepository = new MongoPreferencesRepository(getDb);
+const priceHistoryRepository = new MongoPriceHistoryRepository(getDb);
+export const userPreferences = new UserPreferences(preferencesRepository);
 export const alerts = new Alerts(alertRepository);
 const watchStatusRepository = new MongoWatchStatusRepository(getDb);
 export const dailyCheck = new DailyCheck(
@@ -78,8 +83,13 @@ export const dailyCheck = new DailyCheck(
   getTitleAvailability,
   watchStatusRepository,
   alertRepository,
+  priceHistoryRepository,
+  preferencesRepository,
 );
-export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);
+const priceDrops = new PriceDrops(priceHistoryRepository, preferencesRepository);
+export const titlePrices = new TitlePrices(priceHistoryRepository);
+export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository, priceDrops);
 export const watchlistCheck = new WatchlistCheck(watchlist, watchStatusRepository, subscriptionRepository, (title, subs) =>
   dailyCheck.checkTitle(title, subs),
+  priceDrops,
 );
