@@ -21,7 +21,7 @@ const offer = (
   priceValue: number | null = 3.99,
   quality = "HD",
   currency = "EUR",
-): Offer => ({ monetizationType, quality, priceValue, currency, platform: { id: platformId, name: platformId } }) as Offer;
+): Offer => ({ country: "FR", monetizationType, quality, priceValue, currency, platform: { id: platformId, name: platformId } }) as Offer;
 
 const keys = (selected: ReturnType<typeof selectPriceHistories>) =>
   selected.map(({ history: h }) => `${h.platformId}:${h.monetizationType}`);
@@ -65,8 +65,31 @@ describe("selectPriceHistories", () => {
     expect([higher.low, higher.high]).toEqual([2.99, 6.99]);
   });
 
-  it("n'élargit pas les bornes si la devise diffère", () => {
+  it("n'élargit pas les bornes ni la courbe si la devise diffère, et formate les bornes dans la devise de l'historique", () => {
     const [selected] = selectPriceHistories([history("p1", "RENT")], "FR", ["p1"], [offer("p1", "RENT", 1.99, "HD", "USD")]);
     expect([selected.low, selected.high]).toEqual([2.99, 4.99]);
+    expect(selected.current).toEqual({ value: 1.99, currency: "USD" });
+    expect(selected.currency).toBe("EUR");
+    expect(selected.points).toEqual(history("p1", "RENT").points);
+  });
+
+  it("ajoute à la courbe un point du jour au prix vivant s'il diffère du dernier point", () => {
+    const now = new Date("2026-10-25T10:00:00Z");
+    const [selected] = selectPriceHistories([history("p1", "RENT")], "FR", ["p1"], [offer("p1", "RENT", 2.49, "4K")], now);
+    expect(selected.points).toEqual([
+      { day: "2026-10-01", value: 3.99, currency: "EUR", quality: "HD" },
+      { day: "2026-10-25", value: 2.49, currency: "EUR", quality: "4K" },
+    ]);
+  });
+
+  it("garde les points de l'historique si le prix vivant est celui du dernier point", () => {
+    const [selected] = selectPriceHistories([history("p1", "RENT")], "FR", ["p1"], [offer("p1", "RENT", 3.99)]);
+    expect(selected.points).toEqual(history("p1", "RENT").points);
+  });
+
+  it("remplace le dernier point s'il date d'aujourd'hui", () => {
+    const now = new Date("2026-10-01T10:00:00Z");
+    const [selected] = selectPriceHistories([history("p1", "RENT")], "FR", ["p1"], [offer("p1", "RENT", 2.49)], now);
+    expect(selected.points).toEqual([{ day: "2026-10-01", value: 2.49, currency: "EUR", quality: "HD" }]);
   });
 });

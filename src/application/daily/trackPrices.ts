@@ -29,8 +29,8 @@ export type TrackPricesInput = {
   now: Date;
 };
 
-// Offre suivie : France, location ou achat, HD ou 4K, avec un prix strictement positif.
-type TrackedOffer = Offer & { monetizationType: PricedType; priceValue: number; currency: string };
+// Offre suivie (règle unique, aussi utilisée par la fiche) : France, location ou achat, HD ou 4K, avec un prix strictement positif.
+export type TrackedOffer = Offer & { monetizationType: PricedType; priceValue: number; currency: string };
 
 // Offres suivies d'une même plateforme et d'un même type. La moins chère donne le prix courant.
 type Group = { cheapest: TrackedOffer; offers: TrackedOffer[] };
@@ -74,7 +74,7 @@ export function trackPrices({ title, offers, histories, atHome, threshold, now }
   return { changed, alerts };
 }
 
-function isTracked(offer: Offer): offer is TrackedOffer {
+export function isTracked(offer: Offer): offer is TrackedOffer {
   return (
     offer.country === TRACKED_COUNTRY &&
     (offer.monetizationType === "RENT" || offer.monetizationType === "BUY") &&
@@ -96,7 +96,7 @@ function groupTrackedOffers(offers: Offer[]): Group[] {
   return [...groups.values()].map((list) => ({ cheapest: cheapestOf(list), offers: list }));
 }
 
-function cheapestOf(list: TrackedOffer[]): TrackedOffer {
+export function cheapestOf(list: TrackedOffer[]): TrackedOffer {
   return list.reduce((best, offer) => {
     if (offer.priceValue < best.priceValue) return offer;
     if (offer.priceValue === best.priceValue && offer.quality === "HD") return offer;

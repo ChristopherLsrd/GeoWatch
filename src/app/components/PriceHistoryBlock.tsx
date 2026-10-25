@@ -14,7 +14,7 @@ export function PriceHistoryBlock({
   return (
     <div className="price-history">
       <div className="price-history-title">Historique des prix</div>
-      {histories.map(({ history, current, low, high }) => (
+      {histories.map(({ history, current, currency, low, high, points }) => (
         <div key={`${history.platformId}|${history.monetizationType}`}>
           <div className="price-history-line">
             <strong>
@@ -25,10 +25,10 @@ export function PriceHistoryBlock({
             {formatPrice(current.value, current.currency)}
             <span className="price-history-range">
               {" "}
-              · plus bas {formatPrice(low, current.currency)} · plus haut {formatPrice(high, current.currency)}
+              · plus bas {formatPrice(low, currency)} · plus haut {formatPrice(high, currency)}
             </span>
           </div>
-          {history.points.length >= 2 && <PriceChart points={history.points} />}
+          {points.length >= 2 && <PriceChart points={points} />}
         </div>
       ))}
     </div>

@@ -341,12 +341,16 @@ export function OfferResults({
                     key={key}
                     row={row}
                     group={group}
-                    priceHistories={selectPriceHistories(
-                      priceHistories,
-                      row.country,
-                      group.platforms.map((p) => p.id),
-                      row.offers,
-                    )}
+                    priceHistories={
+                      expanded.has(key)
+                        ? selectPriceHistories(
+                            priceHistories,
+                            row.country,
+                            group.platforms.map((p) => p.id),
+                            row.offers,
+                          )
+                        : []
+                    }
                     open={expanded.has(key)}
                     onToggle={() => toggleIn(setExpanded, key)}
                   />
