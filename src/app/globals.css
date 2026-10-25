@@ -497,6 +497,15 @@ fieldset.filter-group { min-width: 0; margin: 0; padding: 0; border: 0; }
 .country-chevron { width: 18px; height: 18px; color: var(--faint); }
 .cell-label { display: none; color: var(--faint); }
 .detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 10px; padding: 4px 18px 18px; background: var(--surface-foot); }
+.price-history { grid-column: 1 / -1; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.price-history-title { margin-bottom: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); }
+.price-history-line { margin-top: 8px; font-size: 14px; }
+.price-history-range { color: var(--muted); }
+.price-chart { display: block; width: 100%; max-width: 320px; height: auto; margin-top: 6px; }
+.price-chart circle { fill: var(--surface); stroke: var(--accent); stroke-width: 2; cursor: pointer; }
+.price-chart circle.is-selected { fill: var(--accent); }
+.price-chart circle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.price-chart-caption { margin-top: 2px; font-size: 12.5px; color: var(--faint); }
 .detail-offer { display: flex; flex-direction: column; gap: 6px; padding: 14px; background: var(--field); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
 .detail-offer .badge { margin-right: 6px; padding: 2px 9px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 12.5px; }
 .detail-offer .offer-platform { font-weight: 400; }
