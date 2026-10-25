@@ -33,4 +33,7 @@ describe("formatPrice", () => {
     expect(formatPrice(4.99, "EUR").replace(/\s/g, " ")).toBe("4,99 €");
     expect(formatPrice(13, "EUR").replace(/\s/g, " ")).toBe("13,00 €");
   });
+  it("repli si la devise n'est pas un code ISO 4217", () => {
+    expect(formatPrice(4.99, "EURO")).toBe("4,99 EURO");
+  });
 });
