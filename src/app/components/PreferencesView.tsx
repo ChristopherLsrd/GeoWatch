@@ -24,14 +24,14 @@ type PreferencesBody = {
   };
 };
 
-// Valeurs des champs à partir de la réponse du serveur (« 0.5 » est affiché « 0,5 » par le champ numérique).
+// Valeurs des champs à partir de la réponse du serveur, avec la virgule décimale (« 0,5 »).
 function toSaved(body: PreferencesBody): Saved {
   const threshold = body.preferences.priceDropThreshold ?? DEFAULT_PRICE_THRESHOLD;
   return {
     audioLanguage: body.preferences.audioLanguage ?? "",
     subtitleLanguage: body.preferences.subtitleLanguage ?? "",
-    amount: String(threshold.amount),
-    percent: String(threshold.percent),
+    amount: String(threshold.amount).replace(".", ","),
+    percent: String(threshold.percent).replace(".", ","),
   };
 }
 type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "error" };
