@@ -8,6 +8,7 @@ import { DailyCheck } from "@/application/daily/DailyCheck";
 import { GetPerson } from "@/application/people/GetPerson";
 import { ImportLetterboxd } from "@/application/import/ImportLetterboxd";
 import { SearchHistory } from "@/application/history/SearchHistory";
+import { PriceDrops } from "@/application/prices/PriceDrops";
 import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
@@ -84,7 +85,9 @@ export const dailyCheck = new DailyCheck(
   priceHistoryRepository,
   preferencesRepository,
 );
-export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);
+const priceDrops = new PriceDrops(priceHistoryRepository, preferencesRepository);
+export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository, priceDrops);
 export const watchlistCheck = new WatchlistCheck(watchlist, watchStatusRepository, subscriptionRepository, (title, subs) =>
   dailyCheck.checkTitle(title, subs),
+  priceDrops,
 );

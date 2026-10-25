@@ -4,7 +4,7 @@ import type { Subscription } from "@/domain/Subscription";
 import type { WatchStatus } from "@/domain/WatchStatus";
 import type { WatchlistDetails, WatchlistItem } from "@/domain/WatchlistItem";
 import type { Watchlist } from "./Watchlist";
-import { WatchlistOverview } from "./WatchlistOverview";
+import { toOverviewItems, WatchlistOverview } from "./WatchlistOverview";
 
 const netflix = { id: "8", name: "Netflix", iconUrl: null };
 const canal = { id: "381", name: "Canal+", iconUrl: null };
@@ -87,5 +87,13 @@ describe("WatchlistOverview", () => {
       ["tm4", ["Netflix"]],
     ]);
     expect(pending).toBe(3);
+  });
+
+  it("ajoute la pastille de baisse, sauf aux titres disponibles chez moi", () => {
+    const priceDrop = { value: 3.99, previous: 4.99, currency: "EUR", percent: 20, platformName: "Apple TV Store", monetizationType: "RENT" as const, day: "2026-10-24" };
+    const drops = new Map([["tm1", priceDrop], ["tm2", priceDrop]]);
+    const statuses = new Map([["tm1", status("tm1", [])], ["tm2", status("tm2", ["FR:8"])]]);
+    const items = toOverviewItems([item("tm1"), item("tm2"), item("tm3")], statuses, subscriptions, drops);
+    expect(items.map((i) => [i.title.id, i.priceDrop?.percent ?? null])).toEqual([["tm1", 20], ["tm2", null], ["tm3", null]]);
   });
 });
