@@ -1,4 +1,4 @@
-export type PriceThreshold = { amount: number; percent: number };
+import type { PriceThreshold } from "@/domain/PriceHistory";
 
 function parseField(text: string): number | null {
   const trimmed = text.trim().replace(",", ".");

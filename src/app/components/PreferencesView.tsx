@@ -11,6 +11,7 @@ import {
 import { PREFERENCE_LANGUAGES } from "@/config/languages";
 import { languageName } from "@/domain/Language";
 import { ORIGINAL_LANGUAGE } from "@/domain/Preferences";
+import { DEFAULT_PRICE_THRESHOLD, type PriceThreshold } from "@/domain/PriceHistory";
 import { apiFetch } from "./apiFetch";
 import { parsePriceThreshold } from "./priceThresholdInput";
 
@@ -19,17 +20,18 @@ type PreferencesBody = {
   preferences: {
     audioLanguage: string | null;
     subtitleLanguage: string | null;
-    priceDropThreshold: { amount: number; percent: number };
+    priceDropThreshold?: PriceThreshold;
   };
 };
 
 // Valeurs des champs à partir de la réponse du serveur (« 0.5 » est affiché « 0,5 » par le champ numérique).
 function toSaved(body: PreferencesBody): Saved {
+  const threshold = body.preferences.priceDropThreshold ?? DEFAULT_PRICE_THRESHOLD;
   return {
     audioLanguage: body.preferences.audioLanguage ?? "",
     subtitleLanguage: body.preferences.subtitleLanguage ?? "",
-    amount: String(body.preferences.priceDropThreshold.amount),
-    percent: String(body.preferences.priceDropThreshold.percent),
+    amount: String(threshold.amount),
+    percent: String(threshold.percent),
   };
 }
 type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "error" };
@@ -74,14 +76,18 @@ export function PreferencesView() {
     return () => controller.abort();
   }, []);
 
-  const changed =
-    audio !== saved.audioLanguage || subtitles !== saved.subtitleLanguage || amount !== saved.amount || percent !== saved.percent;
+  // Seuils comparés en nombres (« 0.50 » égale « 0.5 ») ; une saisie non analysable compte comme un changement.
+  const parsedThreshold = parsePriceThreshold(amount, percent);
+  const savedThreshold = parsePriceThreshold(saved.amount, saved.percent);
+  const thresholdChanged =
+    !parsedThreshold || !savedThreshold || parsedThreshold.amount !== savedThreshold.amount || parsedThreshold.percent !== savedThreshold.percent;
+  const changed = audio !== saved.audioLanguage || subtitles !== saved.subtitleLanguage || thresholdChanged;
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setMessage(null);
-    const threshold = parsePriceThreshold(amount, percent);
-    if (!threshold) {
+    // Le seuil n'est envoyé (et vérifié) que s'il a changé.
+    if (thresholdChanged && !parsedThreshold) {
       setMessage({ ok: false, text: "Seuil de baisse invalide." });
       return;
     }
@@ -90,7 +96,7 @@ export function PreferencesView() {
       const response = await apiFetch("/api/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audioLanguage: audio, subtitleLanguage: subtitles, priceDropThreshold: threshold }),
+        body: JSON.stringify({ audioLanguage: audio, subtitleLanguage: subtitles, ...(thresholdChanged ? { priceDropThreshold: parsedThreshold } : {}) }),
       });
       if (response.status === 400) {
         const error = (await response.json().catch(() => null)) as { message?: string } | null;
@@ -182,14 +188,14 @@ export function PreferencesView() {
           <label className="pref-threshold-item" htmlFor="pref-amount">
             <span>Baisse d&apos;au moins</span>
             <span className="pref-threshold-input">
-              <input id="pref-amount" type="number" inputMode="decimal" min={0} max={100} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <input id="pref-amount" type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
               <span aria-hidden="true">€</span>
             </span>
           </label>
           <label className="pref-threshold-item" htmlFor="pref-percent">
             <span>ou d&apos;au moins</span>
             <span className="pref-threshold-input">
-              <input id="pref-percent" type="number" inputMode="decimal" min={0} max={100} step="1" value={percent} onChange={(e) => setPercent(e.target.value)} />
+              <input id="pref-percent" type="text" inputMode="decimal" value={percent} onChange={(e) => setPercent(e.target.value)} />
               <span aria-hidden="true">%</span>
             </span>
           </label>
