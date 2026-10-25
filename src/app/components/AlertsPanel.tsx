@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { countryFlag, countryName } from "../../domain/Country";
-import { BellIcon, HomeIcon, LanguageIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowTrendingDownIcon, BellIcon, HomeIcon, LanguageIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { dropPercent } from "../../domain/PriceHistory";
 import { apiFetch } from "./apiFetch";
+import { formatPrice } from "./format";
 
 type AlertItem = {
   id: string;
-  kind: "AT_HOME" | "FRENCH_AUDIO";
+  kind: "AT_HOME" | "FRENCH_AUDIO" | "PRICE_DROP";
   title: { id: string; name: string; posterUrl: string | null };
   platform: { id: string; name: string; iconUrl: string | null } | null;
   country: string | null;
+  price?: { previous: number; value: number; currency: string; monetizationType: "RENT" | "BUY" } | null;
   createdAt: string;
 };
 
@@ -101,7 +104,13 @@ export function AlertsPanel() {
                 <div className="alert-poster" />
               )}
               <span className="alert-kind" aria-hidden="true">
-                {alert.kind === "AT_HOME" ? <HomeIcon /> : <LanguageIcon />}
+                {alert.kind === "AT_HOME" ? (
+                  <HomeIcon />
+                ) : alert.kind === "PRICE_DROP" ? (
+                  <ArrowTrendingDownIcon />
+                ) : (
+                  <LanguageIcon />
+                )}
               </span>
               <span className="alert-text">
                 <strong>{alert.title.name}</strong>
@@ -122,6 +131,19 @@ export function AlertsPanel() {
                       </>
                     )}
                   </>
+                ) : alert.kind === "PRICE_DROP" ? (
+                  alert.price ? (
+                    <>
+                      {alert.price.monetizationType === "RENT" ? ", location sur " : ", achat sur "}
+                      {alert.platform?.iconUrl && (
+                        <img className="alert-platform-icon" src={alert.platform.iconUrl} alt="" />
+                      )}
+                      {alert.platform?.name ?? "une plateforme"}
+                      {` : ${formatPrice(alert.price.previous, alert.price.currency)} → ${formatPrice(alert.price.value, alert.price.currency)} (−${dropPercent(alert.price.previous, alert.price.value)} %)`}
+                    </>
+                  ) : (
+                    " a baissé de prix"
+                  )
                 ) : (
                   " est maintenant disponible en VF"
                 )}
