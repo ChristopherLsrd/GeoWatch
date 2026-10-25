@@ -62,7 +62,7 @@ describe("JustWatchGraphqlCatalog", () => {
           FR: [
             { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-09" },
             { ...rent, lastChangeRetailPriceValue: null, lastChangeDate: "" },
-            { ...rent, retailPriceValue: null, lastChangeRetailPriceValue: 16.48, lastChangeDate: "2026-10-13" },
+            { ...rent, retailPrice: null, retailPriceValue: null, lastChangeRetailPriceValue: 16.48, lastChangeDate: "2026-10-13" },
           ],
         },
       },
@@ -104,15 +104,37 @@ describe("JustWatchGraphqlCatalog", () => {
     expect(offers.FR[0].previousPrice).toBeNull();
   });
 
-  it("garde la date seule quand JustWatch envoie un horodatage ISO", async () => {
+  it("convertit un horodatage ISO en jour calendaire de Paris", async () => {
     const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: "3,99 €", retailPriceValue: 3.99 };
     const { fn } = fakeFetch(200, {
       data: {
-        node: { FR: [{ ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-09T00:00:00Z" }] },
+        node: {
+          FR: [
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-08T23:30:00Z" },
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-091" },
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "garbage" },
+          ],
+        },
       },
     });
     const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
-    expect(offers.FR[0].previousPrice).toEqual({ value: 4.99, day: "2025-06-09" });
+    expect(offers.FR.map((o) => o.previousPrice)).toEqual([{ value: 4.99, day: "2025-06-09" }, null, null]);
+  });
+
+  it("ignore un prix actuel ou un ancien prix à 0 €", async () => {
+    const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: "0 €", retailPriceValue: 0 };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: {
+          FR: [
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-09" },
+            { ...rent, retailPrice: "3,99 €", retailPriceValue: 3.99, lastChangeRetailPriceValue: 0, lastChangeDate: "2025-06-09" },
+          ],
+        },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR.map((o) => o.previousPrice)).toEqual([null, null]);
   });
 
   it("convertit la fiche complète d'un titre", async () => {
