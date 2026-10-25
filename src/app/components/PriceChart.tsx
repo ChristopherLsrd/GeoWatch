@@ -26,7 +26,7 @@ export function PriceChart({ points }: { points: PricePoint[] }) {
   const active = Math.min(selected ?? chart.points.length - 1, chart.points.length - 1);
   const label = `Évolution du prix : ${points.map((_, index) => describePoint(points, index)).join(", ")}`;
 
-  function onKeyDown(event: KeyboardEvent<SVGCircleElement>, index: number) {
+  function onKeyDown(event: KeyboardEvent<SVGGElement>, index: number) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       setSelected(index);
@@ -38,12 +38,10 @@ export function PriceChart({ points }: { points: PricePoint[] }) {
       <svg viewBox="-6 -6 252 60" className="price-chart" role="group" aria-label={label}>
         <path d={chart.path} fill="none" stroke="var(--accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
         {chart.points.map((point, index) => (
-          <circle
+          // Le cercle transparent agrandit la zone de toucher sans changer le dessin.
+          <g
             key={point.day}
-            cx={point.x}
-            cy={point.y}
-            r={4}
-            className={index === active ? "is-selected" : undefined}
+            className={index === active ? "price-chart-point is-selected" : "price-chart-point"}
             tabIndex={0}
             role="button"
             aria-label={describePoint(points, index)}
@@ -51,7 +49,9 @@ export function PriceChart({ points }: { points: PricePoint[] }) {
             onKeyDown={(event) => onKeyDown(event, index)}
           >
             <title>{describePoint(points, index)}</title>
-          </circle>
+            <circle className="price-chart-hit" cx={point.x} cy={point.y} r={12} />
+            <circle className="price-chart-dot" cx={point.x} cy={point.y} r={4} />
+          </g>
         ))}
       </svg>
       <div className="price-chart-caption">{describePoint(points, active)}</div>
