@@ -83,7 +83,6 @@ fragment TitleOffer on Offer {
   audioLanguages
   subtitleLanguages
   lastChangeRetailPriceValue
-  lastChangePercent
   lastChangeDate
 }`;
 
@@ -126,7 +125,6 @@ type JustWatchOffer = {
   audioLanguages: string[] | null;
   subtitleLanguages: string[] | null;
   lastChangeRetailPriceValue?: number | null;
-  lastChangePercent?: number | null;
   // « 2025-06-09 », chaîne vide si aucun changement connu.
   lastChangeDate?: string | null;
 };
@@ -285,11 +283,14 @@ function cleanUrl(url: string | null | undefined): string | null {
   return url?.replace(/&amp;/g, "&") ?? null;
 }
 
-// Dernier changement de prix connu de JustWatch. −100 % : offre devenue sans prix (supports physiques…).
+// Dernier changement de prix connu de JustWatch, pour la location et l'achat seulement.
+// Absent sans prix actuel, s'il égale le prix actuel, ou sans date (« 2025-06-09 », éventuellement suivie d'une heure).
 function previousPrice(offer: JustWatchOffer): Offer["previousPrice"] {
+  if (offer.monetizationType !== "RENT" && offer.monetizationType !== "BUY") return null;
+  const current = offer.retailPriceValue;
   const value = offer.lastChangeRetailPriceValue;
-  const day = offer.lastChangeDate ?? "";
-  if (typeof value !== "number" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || offer.lastChangePercent === -100) return null;
+  const day = /^\d{4}-\d{2}-\d{2}/.exec(offer.lastChangeDate ?? "")?.[0];
+  if (typeof current !== "number" || typeof value !== "number" || value === current || !day) return null;
   return { value, day };
 }
 

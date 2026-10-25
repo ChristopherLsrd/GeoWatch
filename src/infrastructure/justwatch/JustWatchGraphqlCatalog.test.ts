@@ -54,21 +54,65 @@ describe("JustWatchGraphqlCatalog", () => {
     ]);
   });
 
-  it("lit le dernier changement de prix, sauf s'il est vide ou à −100 %", async () => {
+  it("lit le dernier changement de prix, sauf s'il est vide ou sans prix actuel", async () => {
     const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: "3,99 €", retailPriceValue: 3.99 };
     const { fn } = fakeFetch(200, {
       data: {
         node: {
           FR: [
-            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangePercent: -20.04, lastChangeDate: "2025-06-09" },
-            { ...rent, lastChangeRetailPriceValue: null, lastChangePercent: 0, lastChangeDate: "" },
-            { ...rent, retailPriceValue: null, lastChangeRetailPriceValue: 16.48, lastChangePercent: -100, lastChangeDate: "2026-10-13" },
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-09" },
+            { ...rent, lastChangeRetailPriceValue: null, lastChangeDate: "" },
+            { ...rent, retailPriceValue: null, lastChangeRetailPriceValue: 16.48, lastChangeDate: "2026-10-13" },
           ],
         },
       },
     });
     const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
     expect(offers.FR.map((o) => o.previousPrice)).toEqual([{ value: 4.99, day: "2025-06-09" }, null, null]);
+  });
+
+  it("ignore le dernier changement sans prix actuel, même quand ce n'est pas −100 %", async () => {
+    const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: null, retailPriceValue: null };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: { FR: [{ ...rent, lastChangeRetailPriceValue: 12.5, lastChangePercent: 0, lastChangeDate: "2025-06-09" }] },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR[0].previousPrice).toBeNull();
+  });
+
+  it("ignore un ancien prix égal au prix actuel", async () => {
+    const buy = { ...jwOffer, monetizationType: "BUY", presentationType: "HD", retailPrice: "9,99 €", retailPriceValue: 9.99 };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: { FR: [{ ...buy, lastChangeRetailPriceValue: 9.99, lastChangeDate: "2025-06-09" }] },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR[0].previousPrice).toBeNull();
+  });
+
+  it("ne donne un prix précédent qu'à la location et à l'achat", async () => {
+    const flat = { ...jwOffer, monetizationType: "FLATRATE", retailPrice: null, retailPriceValue: 4.99 };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: { FR: [{ ...flat, lastChangeRetailPriceValue: 3.99, lastChangeDate: "2025-06-09" }] },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR[0].previousPrice).toBeNull();
+  });
+
+  it("garde la date seule quand JustWatch envoie un horodatage ISO", async () => {
+    const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: "3,99 €", retailPriceValue: 3.99 };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: { FR: [{ ...rent, lastChangeRetailPriceValue: 4.99, lastChangeDate: "2025-06-09T00:00:00Z" }] },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR[0].previousPrice).toEqual({ value: 4.99, day: "2025-06-09" });
   });
 
   it("convertit la fiche complète d'un titre", async () => {
