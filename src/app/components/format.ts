@@ -51,3 +51,8 @@ export function formatLifeDates(birthDate: string | null, deathDate: string | nu
   if (death) return `Décès : ${formatDate(death)}`;
   return "";
 }
+
+// « 4,99 € ».
+export function formatPrice(value: number, currency: string): string {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(value);
+}
