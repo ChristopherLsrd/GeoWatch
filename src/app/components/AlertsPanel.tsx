@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { countryFlag, countryName } from "../../domain/Country";
 import { ArrowTrendingDownIcon, BellIcon, HomeIcon, LanguageIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { MONETIZATION_LABELS } from "../../domain/MonetizationType";
 import { dropPercent } from "../../domain/PriceHistory";
+import type { AlertPrice } from "../../domain/WatchStatus";
 import { apiFetch } from "./apiFetch";
 import { formatPrice } from "./format";
 
@@ -14,9 +16,19 @@ type AlertItem = {
   title: { id: string; name: string; posterUrl: string | null };
   platform: { id: string; name: string; iconUrl: string | null } | null;
   country: string | null;
-  price?: { previous: number; value: number; currency: string; monetizationType: "RENT" | "BUY" } | null;
+  price?: AlertPrice | null;
   createdAt: string;
 };
+
+// Icône et nom de la plateforme d'une alerte.
+function AlertPlatform({ platform, fallback }: { platform: AlertItem["platform"]; fallback: string }) {
+  return (
+    <>
+      {platform?.iconUrl && <img className="alert-platform-icon" src={platform.iconUrl} alt="" />}
+      {platform?.name ?? fallback}
+    </>
+  );
+}
 
 // Nombre de nouveautés visibles avant « Voir plus ».
 const COLLAPSED_COUNT = 5;
@@ -107,42 +119,19 @@ export function AlertsPanel() {
                 {alert.kind === "AT_HOME" ? (
                   <HomeIcon />
                 ) : alert.kind === "PRICE_DROP" ? (
-                  <ArrowTrendingDownIcon />
-                ) : (
-                  <LanguageIcon />
-                )}
-              </span>
-              <span className="alert-text">
-                <strong>{alert.title.name}</strong>
-                {alert.kind === "AT_HOME" ? (
-                  <>
-                    {" est arrivé sur "}
-                    {alert.platform?.iconUrl && (
-                      <img className="alert-platform-icon" src={alert.platform.iconUrl} alt="" />
-                    )}
-                    {alert.platform?.name ?? "une de vos plateformes"}
-                    {alert.country && (
-                      <>
-                        {" ("}
-                        <span className="flag" aria-hidden="true">
-                          {countryFlag(alert.country)}
-                        </span>{" "}
-                        {countryName(alert.country)})
-                      </>
-                    )}
-                  </>
-                ) : alert.kind === "PRICE_DROP" ? (
                   alert.price ? (
                     <>
-                      {alert.price.monetizationType === "RENT" ? ", location sur " : ", achat sur "}
-                      {alert.platform?.iconUrl && (
-                        <img className="alert-platform-icon" src={alert.platform.iconUrl} alt="" />
-                      )}
-                      {alert.platform?.name ?? "une plateforme"}
-                      {` : ${formatPrice(alert.price.previous, alert.price.currency)} → ${formatPrice(alert.price.value, alert.price.currency)} (−${dropPercent(alert.price.previous, alert.price.value)} %)`}
+                      {`, ${MONETIZATION_LABELS[alert.price.monetizationType].toLowerCase()} sur `}
+                      <AlertPlatform platform={alert.platform} fallback="une plateforme" />
+                      {` : ${formatPrice(alert.price.previous, alert.price.currency)} → ${formatPrice(alert.price.value, alert.price.currency)}`}
+                      {dropPercent(alert.price.previous, alert.price.value) > 0 &&
+                        ` (−${dropPercent(alert.price.previous, alert.price.value)} %)`}
                     </>
                   ) : (
-                    " a baissé de prix"
+                    <>
+                      {" a baissé de prix sur "}
+                      <AlertPlatform platform={alert.platform} fallback="une plateforme" />
+                    </>
                   )
                 ) : (
                   " est maintenant disponible en VF"
