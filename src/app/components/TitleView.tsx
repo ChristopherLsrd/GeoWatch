@@ -62,6 +62,7 @@ export function TitleView({ id }: { id: string }) {
     useAvailabilityBatches(id);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [priceHistories, setPriceHistories] = useState<PriceHistoryView[]>([]);
+  const [pricesVersion, setPricesVersion] = useState(0);
   // undefined tant que non chargées ; null si aucune préférence ou échec.
   const [prefs, setPrefs] = useState<{ audio: string | null; subtitles: string | null } | undefined>();
 
@@ -85,6 +86,7 @@ export function TitleView({ id }: { id: string }) {
   }, [id]);
 
   // Historiques des prix (titres de la liste à voir) ; en cas d'échec, la fiche s'affiche sans.
+  // Relus après un ajout à la liste, qui relève les prix du titre.
   useEffect(() => {
     const current = new AbortController();
     setPriceHistories([]);
@@ -99,7 +101,7 @@ export function TitleView({ id }: { id: string }) {
       }
     })();
     return () => current.abort();
-  }, [id]);
+  }, [id, pricesVersion]);
 
   // Abonnements chargés en parallèle ; en cas d'échec on continue sans badge.
   useEffect(() => {
@@ -180,7 +182,7 @@ export function TitleView({ id }: { id: string }) {
           Impossible de charger le titre.
         </p>
       )}
-      {titleState.kind === "ready" && <TitleHeader title={titleState.title} atHome={atHome} />}
+      {titleState.kind === "ready" && <TitleHeader title={titleState.title} atHome={atHome} onAdded={() => setPricesVersion((version) => version + 1)} />}
 
       {titleState.kind !== "not_found" && (
         <>
@@ -239,7 +241,7 @@ function AtHomeLabel({ subscription }: { subscription: Subscription }) {
 
 type AtHomeEntry = { subscription: Subscription; link: string | null };
 
-function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEntry[] }) {
+function TitleHeader({ title, atHome, onAdded }: { title: TitleDetails; atHome: AtHomeEntry[]; onAdded: () => void }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
@@ -436,6 +438,7 @@ function TitleHeader({ title, atHome }: { title: TitleDetails; atHome: AtHomeEnt
           )}
           <WatchlistButton
             titleId={title.id}
+            onAdded={onAdded}
             extraAction={
               trailer ? (
                 <button ref={trailerButtonRef} type="button" onClick={() => setTrailerOpen(true)}>

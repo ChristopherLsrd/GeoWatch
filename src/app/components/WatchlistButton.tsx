@@ -13,7 +13,16 @@ type State =
   | { kind: "error" };
 
 // Bouton « Ajouter à ma liste » / « Retirer de ma liste » et note perso, sur la page titre.
-export function WatchlistButton({ titleId, extraAction }: { titleId: string; extraAction?: ReactNode }) {
+// `onAdded` : appelé après un ajout réussi (le serveur a déjà vérifié le titre et relevé ses prix).
+export function WatchlistButton({
+  titleId,
+  extraAction,
+  onAdded,
+}: {
+  titleId: string;
+  extraAction?: ReactNode;
+  onAdded?: () => void;
+}) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,6 +77,7 @@ export function WatchlistButton({ titleId, extraAction }: { titleId: string; ext
       } else {
         const body = (await response.json()) as { item: { note: string } };
         setState({ kind: "ready", inList: true, note: body.item.note });
+        onAdded?.();
       }
     } catch {
       setMessage("Impossible d'ajouter le titre, réessayez.");
