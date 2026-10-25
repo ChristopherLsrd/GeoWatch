@@ -21,7 +21,7 @@ import { MONETIZATION_LABELS, MONETIZATION_TYPES, type MonetizationType } from "
 import type { Offer } from "@/domain/Offer";
 import type { PriceHistoryView } from "@/application/prices/TitlePrices";
 import { PriceHistoryBlock } from "./PriceHistoryBlock";
-import { selectPriceHistories } from "./priceHistorySelection";
+import { selectPriceHistories, type SelectedPriceHistory } from "./priceHistorySelection";
 
 const SUMMARY_LIMIT = 2;
 const NOT_PROVIDED = "non renseigné";
@@ -381,7 +381,7 @@ function CountryLine({
 }: {
   row: CountryRow;
   group: PlatformGroup;
-  priceHistories: PriceHistoryView[];
+  priceHistories: SelectedPriceHistory[];
   open: boolean;
   onToggle: () => void;
 }) {

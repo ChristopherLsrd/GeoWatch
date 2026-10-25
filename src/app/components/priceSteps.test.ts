@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PricePoint } from "@/domain/PriceHistory";
-import { stepChart } from "./priceChart";
+import { stepChart } from "./priceSteps";
 
 const point = (day: string, value: number): PricePoint => ({ day, value, currency: "EUR", quality: "HD" });
 

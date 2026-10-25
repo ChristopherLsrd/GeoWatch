@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLifeDates, formatPrice } from "./format";
+import { formatDay, formatLifeDates, formatPrice } from "./format";
 
 describe("formatLifeDates", () => {
   const today = new Date("2026-10-18T12:00:00Z");
@@ -35,5 +35,12 @@ describe("formatPrice", () => {
   });
   it("repli si la devise n'est pas un code ISO 4217", () => {
     expect(formatPrice(4.99, "EURO")).toBe("4,99 EURO");
+  });
+});
+
+describe("formatDay", () => {
+  it("formate un jour en français, sans décalage de fuseau", () => {
+    expect(formatDay("2026-10-11")).toBe("11 oct. 2026");
+    expect(formatDay("2026-01-01")).toBe("1 janv. 2026");
   });
 });

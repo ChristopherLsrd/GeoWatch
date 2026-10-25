@@ -16,11 +16,11 @@ export class TitlePrices {
       const range = priceRange(history);
       return range ? [{ ...history, points: currentCurrencyPoints(history), ...range }] : [];
     });
-    // Par plateforme, puis location avant achat.
+    // Location avant achat, puis par plateforme.
     return views.sort(
       (a, b) =>
-        a.platformName.localeCompare(b.platformName, "fr") ||
-        monetizationRank(a.monetizationType) - monetizationRank(b.monetizationType),
+        monetizationRank(a.monetizationType) - monetizationRank(b.monetizationType) ||
+        a.platformName.localeCompare(b.platformName, "fr"),
     );
   }
 }

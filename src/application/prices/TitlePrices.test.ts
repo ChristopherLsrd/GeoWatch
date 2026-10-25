@@ -46,7 +46,7 @@ describe("TitlePrices", () => {
     expect(view).toEqual({ ...history, points: mixed.points.slice(1), low: 3.99, high: 4.99 });
   });
 
-  it("trie par plateforme, puis location avant achat", async () => {
+  it("trie location avant achat, puis par plateforme", async () => {
     const at = (platformName: string, monetizationType: PriceHistory["monetizationType"]): PriceHistory => ({
       ...history,
       platformName,
@@ -60,6 +60,6 @@ describe("TitlePrices", () => {
       ]),
     );
     const names = (await prices.forTitle("tm1")).map((view) => `${view.platformName} ${view.monetizationType}`);
-    expect(names).toEqual(["Apple TV Store RENT", "Apple TV Store BUY", "Prime Video RENT"]);
+    expect(names).toEqual(["Apple TV Store RENT", "Prime Video RENT", "Apple TV Store BUY"]);
   });
 });

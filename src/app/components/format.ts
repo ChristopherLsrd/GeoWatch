@@ -74,3 +74,10 @@ export function formatPrice(value: number, currency: string): string {
   const format = priceFormat(currency);
   return format ? format.format(value) : `${value.toFixed(2).replace(".", ",")} ${currency}`;
 }
+
+const shortDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
+// « 2026-10-11 » → « 11 oct. 2026 » (jour sans heure, lu en UTC).
+export function formatDay(day: string): string {
+  return shortDate.format(new Date(`${day}T00:00:00Z`));
+}

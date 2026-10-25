@@ -3,33 +3,28 @@
 import { useState, type KeyboardEvent } from "react";
 import { parisDay } from "@/domain/CalendarDay";
 import type { PricePoint } from "@/domain/PriceHistory";
-import { formatPrice } from "./format";
-import { stepChart } from "./priceChart";
+import { formatDay, formatPrice } from "./format";
+import { stepChart } from "./priceSteps";
 
 const WIDTH = 240;
 const HEIGHT = 48;
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-function formatDay(day: string): string {
-  return dateFormat.format(new Date(`${day}T00:00:00Z`));
+// « 3,99 € depuis le 11 oct. 2026 ». Le jour du premier point peut être inventé (veille du premier
+// changement vu) : il se lit « 5,99 € avant le 20 oct. 2026 », avec le jour du point suivant.
+function describePoint(points: PricePoint[], index: number): string {
+  const price = formatPrice(points[index].value, points[index].currency);
+  if (index === 0 && points.length >= 2) return `${price} avant le ${formatDay(points[1].day)}`;
+  return `${price} depuis le ${formatDay(points[index].day)}`;
 }
 
 // Courbe en escalier du prix. `points` : déjà filtrés sur la devise actuelle.
-export function PriceChart({ points, label }: { points: PricePoint[]; label: string }) {
+export function PriceChart({ points }: { points: PricePoint[] }) {
   const [selected, setSelected] = useState<number | null>(null);
   const chart = stepChart(points, parisDay(new Date()), WIDTH, HEIGHT);
   if (!chart) return null;
 
-  const currency = points[points.length - 1].currency;
-  const active = selected ?? chart.points.length - 1;
-  const caption = (index: number) =>
-    `${formatPrice(chart.points[index].value, currency)} depuis le ${formatDay(chart.points[index].day)}`;
+  const active = Math.min(selected ?? chart.points.length - 1, chart.points.length - 1);
+  const label = `Évolution du prix : ${points.map((_, index) => describePoint(points, index)).join(", ")}`;
 
   function onKeyDown(event: KeyboardEvent<SVGCircleElement>, index: number) {
     if (event.key === "Enter" || event.key === " ") {
@@ -40,7 +35,7 @@ export function PriceChart({ points, label }: { points: PricePoint[]; label: str
 
   return (
     <>
-      <svg viewBox="-4 -4 248 56" className="price-chart" role="img" aria-label={label}>
+      <svg viewBox="-6 -6 252 60" className="price-chart" role="group" aria-label={label}>
         <path d={chart.path} fill="none" stroke="var(--accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
         {chart.points.map((point, index) => (
           <circle
@@ -51,15 +46,15 @@ export function PriceChart({ points, label }: { points: PricePoint[]; label: str
             className={index === active ? "is-selected" : undefined}
             tabIndex={0}
             role="button"
-            aria-label={caption(index)}
+            aria-label={describePoint(points, index)}
             onClick={() => setSelected(index)}
             onKeyDown={(event) => onKeyDown(event, index)}
           >
-            <title>{caption(index)}</title>
+            <title>{describePoint(points, index)}</title>
           </circle>
         ))}
       </svg>
-      <div className="price-chart-caption">{caption(active)}</div>
+      <div className="price-chart-caption">{describePoint(points, active)}</div>
     </>
   );
 }
