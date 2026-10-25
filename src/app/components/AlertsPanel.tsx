@@ -119,6 +119,28 @@ export function AlertsPanel() {
                 {alert.kind === "AT_HOME" ? (
                   <HomeIcon />
                 ) : alert.kind === "PRICE_DROP" ? (
+                  <ArrowTrendingDownIcon />
+                ) : (
+                  <LanguageIcon />
+                )}
+              </span>
+              <span className="alert-text">
+                <strong>{alert.title.name}</strong>
+                {alert.kind === "AT_HOME" ? (
+                  <>
+                    {" est arrivé sur "}
+                    <AlertPlatform platform={alert.platform} fallback="une de vos plateformes" />
+                    {alert.country && (
+                      <>
+                        {" ("}
+                        <span className="flag" aria-hidden="true">
+                          {countryFlag(alert.country)}
+                        </span>{" "}
+                        {countryName(alert.country)})
+                      </>
+                    )}
+                  </>
+                ) : alert.kind === "PRICE_DROP" ? (
                   alert.price ? (
                     <>
                       {`, ${MONETIZATION_LABELS[alert.price.monetizationType].toLowerCase()} sur `}
