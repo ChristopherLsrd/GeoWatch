@@ -15,8 +15,6 @@ import type { Title } from "@/domain/Title";
 import type { Alert } from "@/domain/WatchStatus";
 
 export const TRACKED_COUNTRY = "FR";
-const TRACKED_QUALITIES = ["HD", "4K"];
-const PRICED_TYPES: string[] = ["RENT", "BUY"];
 // Au premier relevé, un changement JustWatch plus ancien sert de référence, sans alerte.
 export const RECENT_DROP_DAYS = 7;
 
@@ -31,6 +29,12 @@ export type TrackPricesInput = {
   now: Date;
 };
 
+// Offre suivie : France, location ou achat, HD ou 4K, avec un prix strictement positif.
+type TrackedOffer = Offer & { monetizationType: PricedType; priceValue: number; currency: string };
+
+// Offres suivies d'une même plateforme et d'un même type. La moins chère donne le prix courant.
+type Group = { cheapest: TrackedOffer; offers: TrackedOffer[] };
+
 // Nouvel historique et prix auquel comparer le prix du jour (null : pas de baisse possible).
 type Step = { points: PricePoint[]; previous: PricePoint | null };
 
@@ -43,45 +47,61 @@ export function trackPrices({ title, offers, histories, atHome, threshold, now }
   const changed: PriceHistory[] = [];
   const alerts: Alert[] = [];
 
-  for (const offer of cheapestOffers(offers)) {
+  for (const group of groupTrackedOffers(offers)) {
+    const { cheapest } = group;
     const key = {
       titleId: title.id,
       country: TRACKED_COUNTRY,
-      platformId: offer.platform.id,
-      monetizationType: offer.monetizationType as PricedType,
+      platformId: cheapest.platform.id,
+      monetizationType: cheapest.monetizationType,
     };
     const point: PricePoint = {
       day: today,
-      value: offer.priceValue as number,
-      currency: offer.currency as string,
-      quality: offer.quality,
+      value: cheapest.priceValue,
+      currency: cheapest.currency,
+      quality: cheapest.quality,
     };
     const history = known.get(priceHistoryId(key));
-    const step = history ? next(history.points, point) : start(offer, point);
+    const step = history ? next(history.points, point) : start(group, point);
     if (!step) continue;
-    changed.push({ ...key, platformName: offer.platform.name, points: step.points });
+    changed.push({ ...key, platformName: cheapest.platform.name, points: step.points });
 
     const current = step.points.at(-1);
     if (step.previous && current && !atHome && isSignificantDrop(step.previous.value, current.value, threshold)) {
-      alerts.push(priceDropAlert(title, offer.platform, key.monetizationType, step.previous.value, current, now));
+      alerts.push(priceDropAlert(title, cheapest.platform, key.monetizationType, step.previous.value, current, now));
     }
   }
   return { changed, alerts };
 }
 
-// Par plateforme et par type, l'offre HD ou 4K la moins chère (la HD à prix égal).
-function cheapestOffers(offers: Offer[]): Offer[] {
-  const best = new Map<string, Offer>();
+function isTracked(offer: Offer): offer is TrackedOffer {
+  return (
+    offer.country === TRACKED_COUNTRY &&
+    (offer.monetizationType === "RENT" || offer.monetizationType === "BUY") &&
+    (offer.quality === "HD" || offer.quality === "4K") &&
+    offer.priceValue !== null &&
+    offer.priceValue > 0 &&
+    !!offer.currency
+  );
+}
+
+// Par plateforme et par type, les offres suivies, avec la moins chère (la HD à prix égal).
+function groupTrackedOffers(offers: Offer[]): Group[] {
+  const groups = new Map<string, TrackedOffer[]>();
   for (const offer of offers) {
-    if (offer.country !== TRACKED_COUNTRY || !PRICED_TYPES.includes(offer.monetizationType)) continue;
-    if (!TRACKED_QUALITIES.includes(offer.quality) || offer.priceValue === null || !offer.currency) continue;
+    if (!isTracked(offer)) continue;
     const key = `${offer.platform.id}:${offer.monetizationType}`;
-    const current = best.get(key);
-    const cheaper = !current || offer.priceValue < (current.priceValue as number);
-    const tieInHd = current && offer.priceValue === current.priceValue && offer.quality === "HD";
-    if (cheaper || tieInHd) best.set(key, offer);
+    groups.set(key, [...(groups.get(key) ?? []), offer]);
   }
-  return [...best.values()];
+  return [...groups.values()].map((list) => ({ cheapest: cheapestOf(list), offers: list }));
+}
+
+function cheapestOf(list: TrackedOffer[]): TrackedOffer {
+  return list.reduce((best, offer) => {
+    if (offer.priceValue < best.priceValue) return offer;
+    if (offer.priceValue === best.priceValue && offer.quality === "HD") return offer;
+    return best;
+  });
 }
 
 // Historique connu : un point de plus si le prix a changé.
@@ -95,12 +115,20 @@ function next(points: PricePoint[], point: PricePoint): Step | null {
   return { points: [...kept, point], previous: before && before.currency === point.currency ? before : null };
 }
 
-// Premier relevé : le dernier changement JustWatch donne l'ancien prix et le jour où le prix actuel
-// a commencé. Le jour de début de l'ancien prix est inconnu : la veille du changement.
-function start(offer: Offer, point: PricePoint): Step {
-  const change = offer.previousPrice;
-  if (!change || change.day > point.day || change.value === point.value) return { points: [point], previous: null };
-  const before: PricePoint = { ...point, day: addDays(change.day, -1), value: change.value };
+// Premier relevé : le dernier changement JustWatch de l'offre la moins chère donne le jour où le prix
+// actuel a commencé (D). L'ancien prix est le plus bas, juste avant D, de toutes les offres suivies de
+// la plateforme et du type : leur ancien prix si changé à D ou après, sinon leur prix actuel.
+// Le jour de début de l'ancien prix est inconnu : la veille de D.
+function start({ cheapest, offers }: Group, point: PricePoint): Step {
+  const change = cheapest.previousPrice;
+  if (!change || change.day > point.day) return { points: [point], previous: null };
+  const old = Math.min(
+    ...offers.map((offer) =>
+      offer.previousPrice && offer.previousPrice.day >= change.day ? offer.previousPrice.value : offer.priceValue,
+    ),
+  );
+  if (old === point.value) return { points: [point], previous: null };
+  const before: PricePoint = { ...point, day: addDays(change.day, -1), value: old };
   const current: PricePoint = { ...point, day: change.day };
   const recent = daysBetween(change.day, point.day) <= RECENT_DROP_DAYS;
   return { points: [before, current], previous: recent ? before : null };

@@ -158,4 +158,29 @@ describe("trackPrices", () => {
     const { changed } = run([priced("RENT", 4.99, { platform: { ...apple, name: "Apple TV" } })], [history([["2026-10-20", 3.99]])]);
     expect(changed[0].platformName).toBe("Apple TV");
   });
+
+  it("ignore une offre à 0 € (pas de prix)", () => {
+    expect(run([priced("RENT", 0)])).toEqual({ changed: [], alerts: [] });
+  });
+
+  it("premier relevé : l'ancien prix est le plus bas des offres HD et 4K", () => {
+    const { changed, alerts } = run([
+      priced("RENT", 4.99),
+      priced("RENT", 3.99, { quality: "4K", previousPrice: { value: 6.99, day: "2026-10-21" } }),
+    ]);
+    expect(changed.map(points)).toEqual([[["2026-10-20", 4.99], ["2026-10-21", 3.99]]]);
+    expect(changed[0].points[1].quality).toBe("4K");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].price).toEqual({ previous: 4.99, value: 3.99, currency: "EUR", monetizationType: "RENT" });
+  });
+
+  it("premier relevé : pas de point de départ si le prix le plus bas n'a pas bougé", () => {
+    const { changed, alerts } = run([
+      priced("RENT", 4.99),
+      priced("RENT", 4.99, { quality: "4K", previousPrice: { value: 6.99, day: "2026-10-21" } }),
+    ]);
+    expect(changed.map(points)).toEqual([[["2026-10-25", 4.99]]]);
+    expect(changed[0].points[0].quality).toBe("HD");
+    expect(alerts).toEqual([]);
+  });
 });
