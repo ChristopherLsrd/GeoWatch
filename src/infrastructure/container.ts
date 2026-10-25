@@ -30,6 +30,7 @@ import { CachedContentAdvisories } from "./mongo/CachedContentAdvisories";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
 import { MongoAvailabilityCache } from "./mongo/MongoAvailabilityCache";
 import { MongoPersonCache } from "./mongo/MongoPersonCache";
+import { MongoPriceHistoryRepository } from "./mongo/MongoPriceHistoryRepository";
 import { MongoPreferencesRepository } from "./mongo/MongoPreferencesRepository";
 import { MongoSearchHistoryRepository } from "./mongo/MongoSearchHistoryRepository";
 import { MongoSubscriptionRepository } from "./mongo/MongoSubscriptionRepository";
@@ -69,7 +70,9 @@ export const watchlist = new Watchlist(watchlistRepository, catalog);
 export const importLetterboxd = new ImportLetterboxd(catalog, watchlist);
 export const subscriptions = new Subscriptions(subscriptionRepository, catalog);
 export const searchHistory = new SearchHistory(new MongoSearchHistoryRepository(getDb));
-export const userPreferences = new UserPreferences(new MongoPreferencesRepository(getDb));
+const preferencesRepository = new MongoPreferencesRepository(getDb);
+const priceHistoryRepository = new MongoPriceHistoryRepository(getDb);
+export const userPreferences = new UserPreferences(preferencesRepository);
 export const alerts = new Alerts(alertRepository);
 const watchStatusRepository = new MongoWatchStatusRepository(getDb);
 export const dailyCheck = new DailyCheck(
@@ -78,6 +81,8 @@ export const dailyCheck = new DailyCheck(
   getTitleAvailability,
   watchStatusRepository,
   alertRepository,
+  priceHistoryRepository,
+  preferencesRepository,
 );
 export const watchlistOverview = new WatchlistOverview(watchlist, watchStatusRepository, subscriptionRepository);
 export const watchlistCheck = new WatchlistCheck(watchlist, watchStatusRepository, subscriptionRepository, (title, subs) =>
