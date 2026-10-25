@@ -52,6 +52,7 @@ export function WatchlistCards() {
                       availableAtHome={item.availableAtHome}
                       imdbScore={item.details?.imdbScore}
                       tmdbScore={item.details?.tmdbScore}
+                      priceDrop={item.priceDrop}
                     />
                   </li>
                 );
