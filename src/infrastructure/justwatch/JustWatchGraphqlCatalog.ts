@@ -82,6 +82,9 @@ fragment TitleOffer on Offer {
   deeplinkURL(platform: WEB)
   audioLanguages
   subtitleLanguages
+  lastChangeRetailPriceValue
+  lastChangePercent
+  lastChangeDate
 }`;
 
 type JustWatchTitle = {
@@ -122,6 +125,10 @@ type JustWatchOffer = {
   deeplinkURL: string | null;
   audioLanguages: string[] | null;
   subtitleLanguages: string[] | null;
+  lastChangeRetailPriceValue?: number | null;
+  lastChangePercent?: number | null;
+  // « 2025-06-09 », chaîne vide si aucun changement connu.
+  lastChangeDate?: string | null;
 };
 
 export type JustWatchOptions = {
@@ -278,6 +285,14 @@ function cleanUrl(url: string | null | undefined): string | null {
   return url?.replace(/&amp;/g, "&") ?? null;
 }
 
+// Dernier changement de prix connu de JustWatch. −100 % : offre devenue sans prix (supports physiques…).
+function previousPrice(offer: JustWatchOffer): Offer["previousPrice"] {
+  const value = offer.lastChangeRetailPriceValue;
+  const day = offer.lastChangeDate ?? "";
+  if (typeof value !== "number" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || offer.lastChangePercent === -100) return null;
+  return { value, day };
+}
+
 function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
   if (!isMonetizationType(offer.monetizationType)) return null;
   return {
@@ -298,5 +313,6 @@ function toOffer(country: CountryCode, offer: JustWatchOffer): Offer | null {
     url: cleanUrl(offer.standardWebURL),
     // Lien qui ouvre directement la lecture sur la plateforme, quand JustWatch le connaît.
     deepLinkUrl: cleanUrl(offer.deeplinkURL),
+    previousPrice: previousPrice(offer),
   };
 }

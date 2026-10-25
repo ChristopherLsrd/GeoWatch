@@ -34,6 +34,7 @@ describe("JustWatchGraphqlCatalog", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].query).toContain("FR: offers(country: FR");
     expect(calls[0].query).toContain("BE: offers(country: BE");
+    expect(calls[0].query).toContain("lastChangeRetailPriceValue");
     expect(offers.BE).toEqual([]);
     expect(offers.FR).toEqual([
       {
@@ -48,8 +49,26 @@ describe("JustWatchGraphqlCatalog", () => {
         subtitleLanguages: [],
         url: "https://www.netflix.com/title/70131314",
         deepLinkUrl: "https://www.netflix.com/watch/70131314?a=1&b=2",
+        previousPrice: null,
       },
     ]);
+  });
+
+  it("lit le dernier changement de prix, sauf s'il est vide ou à −100 %", async () => {
+    const rent = { ...jwOffer, monetizationType: "RENT", presentationType: "HD", retailPrice: "3,99 €", retailPriceValue: 3.99 };
+    const { fn } = fakeFetch(200, {
+      data: {
+        node: {
+          FR: [
+            { ...rent, lastChangeRetailPriceValue: 4.99, lastChangePercent: -20.04, lastChangeDate: "2025-06-09" },
+            { ...rent, lastChangeRetailPriceValue: null, lastChangePercent: 0, lastChangeDate: "" },
+            { ...rent, retailPriceValue: null, lastChangeRetailPriceValue: 16.48, lastChangePercent: -100, lastChangeDate: "2026-10-13" },
+          ],
+        },
+      },
+    });
+    const offers = await new JustWatchGraphqlCatalog({ fetch: fn }).getOffers("tm1", ["FR"]);
+    expect(offers.FR.map((o) => o.previousPrice)).toEqual([{ value: 4.99, day: "2025-06-09" }, null, null]);
   });
 
   it("convertit la fiche complète d'un titre", async () => {
