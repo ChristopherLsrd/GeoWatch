@@ -21,3 +21,8 @@ Test du 2026-10-24 (les 40 films les plus populaires en FR, BE et CA) :
 - HBO Max : presque toujours renseignée (11 sur 11 en FR, 18 sur 18 en BE) ; Prime Video et Disney+ : parfois (2 ou 3 sur 9) ; Netflix, Canal+, Apple TV, Crave et Paramount+ : jamais.
 
 À reprendre si la couverture s'améliore : refaire la même mesure avant de construire quoi que ce soit.
+
+## Suivi des prix : prix cible et autres pays (notés le 2026-10-25)
+
+- **Prix cible par titre** : dans « Ma liste », à côté de la note perso, « préviens-moi sous 3 € ». Alerte dès qu'une offre en France (HD ou 4K) passe sous ce prix, même sans baisse récente.
+- **Autres pays** : le suivi des prix ne couvre que la France. Suivre d'autres pays donnerait des alertes dans d'autres devises.
