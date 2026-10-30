@@ -3,6 +3,17 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
+// Chemin d'une page du site, ou « / » si l'adresse mène ailleurs (« //hôte », « /\hôte », tabulations…) :
+// on laisse le parseur d'URL trancher plutôt qu'une expression régulière.
+function sitePath(value) {
+  try {
+    const url = new URL(value, self.location.origin);
+    return url.origin === self.location.origin ? url.pathname + url.search + url.hash : "/";
+  } catch {
+    return "/";
+  }
+}
+
 self.addEventListener("push", (event) => {
   const message = { title: "GeoWatch", body: "", url: "/", image: null };
   if (event.data) {
@@ -13,9 +24,8 @@ self.addEventListener("push", (event) => {
       } else if (parsed && typeof parsed === "object") {
         if (typeof parsed.title === "string") message.title = parsed.title;
         if (typeof parsed.body === "string") message.body = parsed.body;
-        // Chemin du site seulement : « //hôte » ou « /\hôte » mèneraient ailleurs.
-        if (typeof parsed.url === "string" && /^\/(?![/\\])/.test(parsed.url)) message.url = parsed.url;
-        if (typeof parsed.image === "string" && parsed.image.startsWith("https://")) message.image = parsed.image;
+        if (typeof parsed.url === "string") message.url = sitePath(parsed.url);
+        if (typeof parsed.image === "string" && /^https?:\/\//.test(parsed.image)) message.image = parsed.image;
       }
     } catch {
       message.body = event.data.text();
@@ -33,26 +43,18 @@ self.addEventListener("push", (event) => {
 
 // Au clic : parmi les onglets contrôlés (navigate n'y fonctionne que là), celui qui a le focus, sinon le premier ;
 // sans onglet, nouvelle fenêtre. Le focus passe avant la navigation, qui peut être lente : le navigateur
-// n'autorise le focus que peu de temps après le clic.
+// n'autorise le focus que peu de temps après le clic. Jamais de second onglet si l'un est déjà au premier plan.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "/", self.location.origin);
-  if (url.origin !== self.location.origin) return;
+  const url = new URL(sitePath(String(event.notification.data?.url ?? "/")), self.location.origin);
   event.waitUntil(
     (async () => {
       const controlled = await self.clients.matchAll({ type: "window" });
       const client = controlled.find((w) => w.focused) ?? controlled[0];
       if (!client) return self.clients.openWindow(url.href);
-      try {
-        await client.focus();
-      } catch {
-        // Ignoré : un échec du focus ne doit jamais ouvrir un second onglet.
-      }
-      try {
-        await client.navigate(url.href);
-      } catch {
-        return self.clients.openWindow(url.href);
-      }
+      // Échecs ignorés : l'onglet existant reste où il est plutôt que d'en ouvrir un second.
+      await client.focus().catch(() => {});
+      await client.navigate(url.href).catch(() => {});
     })(),
   );
 });
