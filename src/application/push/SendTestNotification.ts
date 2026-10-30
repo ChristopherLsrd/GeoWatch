@@ -21,11 +21,14 @@ export class SendTestNotification {
 
   async execute(): Promise<TestResult[]> {
     if (!this.sender) throw new PushNotConfiguredError();
-    const results: TestResult[] = [];
-    for (const device of await this.subscriptions.list()) {
-      const delivery = await deliver(this.sender, this.subscriptions, device, [TEST_MESSAGE]);
-      results.push({ device: device.device, ok: delivery.sent === 1, error: delivery.error });
-    }
-    return results;
+    const sender = this.sender;
+    // Appareils servis en parallèle : la durée ne dépend pas de leur nombre (deliver ne lève pas).
+    const devices = await this.subscriptions.list();
+    return Promise.all(
+      devices.map(async (device) => {
+        const delivery = await deliver(sender, this.subscriptions, device, [TEST_MESSAGE]);
+        return { device: device.device, ok: delivery.sent === 1, error: delivery.error };
+      }),
+    );
   }
 }

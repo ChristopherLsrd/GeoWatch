@@ -41,9 +41,14 @@ export class NotifyAlerts implements AlertNotifier {
     });
     if (wanted.length === 0) return report;
 
+    const sender = this.sender;
     const messages = alertMessages(wanted);
-    for (const device of await this.subscriptions.list()) {
-      const delivery = await deliver(this.sender, this.subscriptions, device, messages);
+    // Appareils servis en parallèle, messages dans l'ordre pour chacun (deliver ne lève pas).
+    const devices = await this.subscriptions.list();
+    const deliveries = await Promise.all(
+      devices.map((device) => deliver(sender, this.subscriptions, device, messages)),
+    );
+    for (const delivery of deliveries) {
       report.sent += delivery.sent;
       report.failed += delivery.failed;
       if (delivery.removed) report.removed++;

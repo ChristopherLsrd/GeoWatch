@@ -29,7 +29,11 @@ describe("NotifyAlerts", () => {
       alert("tm2", "FRENCH_AUDIO"),
       alert("tm3", "PRICE_DROP"),
     ]);
-    expect(push.sent.map(([e, m]) => `${e}:${m.url}`)).toEqual(["e1:/titre/tm1", "e1:/titre/tm3", "e2:/titre/tm1", "e2:/titre/tm3"]);
+    // Appareils servis en parallèle : seul l'ordre des messages de chaque appareil est garanti.
+    const sentTo = (endpoint: string) => push.sent.filter(([e]) => e === endpoint).map(([, m]) => m.url);
+    expect(sentTo("e1")).toEqual(["/titre/tm1", "/titre/tm3"]);
+    expect(sentTo("e2")).toEqual(["/titre/tm1", "/titre/tm3"]);
+    expect(push.sent).toHaveLength(4);
     expect(report).toEqual({ sent: 4, failed: 0, removed: 0 });
   });
 
