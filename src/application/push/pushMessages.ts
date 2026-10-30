@@ -29,15 +29,23 @@ function alertMessage(alert: Alert): PushMessage {
 
 // « Disponible sur Netflix (France) », « Location : 3,99 € → 2,99 € sur Apple TV ».
 function alertBody(alert: Alert): string {
-  if (alert.kind === "PRICE_DROP") {
-    const platform = alert.platform?.name ?? "une plateforme";
-    if (!alert.price) return `Baisse de prix sur ${platform}`;
-    const { monetizationType, previous, value, currency } = alert.price;
-    return `${MONETIZATION_LABELS[monetizationType]} : ${formatPrice(previous, currency)} → ${formatPrice(value, currency)} sur ${platform}`;
+  switch (alert.kind) {
+    case "PRICE_DROP": {
+      const platform = alert.platform?.name ?? "une plateforme";
+      if (!alert.price) return `Baisse de prix sur ${platform}`;
+      const { monetizationType, previous, value, currency } = alert.price;
+      return `${MONETIZATION_LABELS[monetizationType]} : ${formatPrice(previous, currency)} → ${formatPrice(value, currency)} sur ${platform}`;
+    }
+    case "AT_HOME": {
+      const platform = alert.platform?.name ?? "une de vos plateformes";
+      return `Disponible sur ${platform}${alert.country ? ` (${countryName(alert.country)})` : ""}`;
+    }
+    case "FRENCH_AUDIO":
+      return "Disponible en VF";
+    default: {
+      // Un nouveau type d'alerte doit recevoir son texte : sinon tsc échoue ici.
+      const unknown: never = alert.kind;
+      return unknown;
+    }
   }
-  if (alert.kind === "AT_HOME") {
-    const platform = alert.platform?.name ?? "une de vos plateformes";
-    return `Disponible sur ${platform}${alert.country ? ` (${countryName(alert.country)})` : ""}`;
-  }
-  return "Disponible en VF";
 }

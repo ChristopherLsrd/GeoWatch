@@ -1,4 +1,4 @@
-// Un formateur par devise, créé une fois (comme scoreFormat).
+// Un formateur par devise, créé une fois.
 const priceFormats = new Map<string, Intl.NumberFormat>();
 
 // Null si la devise n'est pas un code ISO 4217 valide (Intl lève alors une RangeError).
