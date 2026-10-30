@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Availability } from "@/domain/Availability";
 import type { Offer } from "@/domain/Offer";
 import type { AlertRepository } from "@/domain/ports/AlertRepository";
@@ -12,6 +12,7 @@ import type { Title } from "@/domain/Title";
 import type { Alert, WatchStatus } from "@/domain/WatchStatus";
 import type { WatchlistItem } from "@/domain/WatchlistItem";
 import { GetTitleAvailability } from "../catalog/GetTitleAvailability";
+import type { AlertNotifier } from "../push/NotifyAlerts";
 import { DailyCheck } from "./DailyCheck";
 
 const netflix = { id: "8", name: "Netflix", iconUrl: null };
@@ -65,7 +66,10 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     get: async (id) => statuses.get(id) ?? null,
     getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
     list: async () => [...statuses.values()],
-    save: async (status) => void statuses.set(status.titleId, status),
+    save: async (status) => {
+      if (status.titleId === failStatusSaveAt) throw new Error("Mongo indisponible");
+      statuses.set(status.titleId, status);
+    },
   };
   let failAlertsOnce = false;
   const stored: Alert[] = [];
@@ -83,6 +87,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   };
   let now = new Date("2026-10-17T05:00:00Z");
   let failPrices = false;
+  let failStatusSaveAt: string | null = null;
   const histories = new Map<string, PriceHistory>();
   const priceRepo: PriceHistoryRepository = {
     list: async () => [...histories.values()],
@@ -92,6 +97,16 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
       for (const h of list) histories.set(`${h.titleId}:${h.platformId}:${h.monetizationType}`, h);
     },
   };
+  const notified: Alert[][] = [];
+  let failNotify = false;
+  const notifier: AlertNotifier = {
+    execute: async (alerts) => {
+      if (failNotify) throw new Error("FCM indisponible");
+      notified.push(alerts);
+      return { sent: alerts.length, failed: 0, removed: 0 };
+    },
+  };
+  let onSleep = () => {};
   const check = new DailyCheck(
     { list: async () => items } as never,
     { list: async () => subscriptions } as never,
@@ -100,8 +115,9 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     alertRepo,
     priceRepo,
     { get: async () => null, save: async () => {} },
+    notifier,
     () => now,
-    async () => {},
+    async () => onSleep(),
   );
   return {
     check,
@@ -111,19 +127,25 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     setUnavailable: () => (unavailable = true),
     histories,
     setNow: (date: Date) => (now = date),
-    failPrices: () => (failPrices = true),
+    failPrices: (fail = true) => (failPrices = fail),
     failAlertsOnce: () => (failAlertsOnce = true),
     statuses,
+    notified,
+    failStatusSaveAt: (id: string) => (failStatusSaveAt = id),
+    failNotify: () => (failNotify = true),
+    setOnSleep: (fn: () => void) => (onSleep = fn),
   };
 }
 
 const item = (id: string): WatchlistItem => ({ title: title(id), details: null, note: "", addedAt: new Date() });
 
 describe("DailyCheck", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("sert de référence au premier passage, puis signale l'arrivée chez moi et la VF", async () => {
     const t = setup([item("tm1")], [{ platform: netflix, country: "FR" }]);
     t.setOffers({ tm1: [offer("BE", canal)] });
-    expect(await t.check.execute()).toEqual({ checked: 1, total: 1, alerts: 0, stoppedEarly: null });
+    expect(await t.check.execute()).toEqual({ checked: 1, total: 1, alerts: 0, stoppedEarly: null, notified: 0 });
 
     t.setOffers({ tm1: [offer("BE", canal), offer("FR", netflix, ["fr", "en"])] });
     const report = await t.check.execute();
@@ -146,7 +168,7 @@ describe("DailyCheck", () => {
   it("s'arrête proprement si JustWatch limite les requêtes", async () => {
     const t = setup([item("tm1"), item("tm2")], []);
     t.setUnavailable();
-    expect(await t.check.execute()).toEqual({ checked: 0, total: 2, alerts: 0, stoppedEarly: "catalog_unavailable" });
+    expect(await t.check.execute()).toEqual({ checked: 0, total: 2, alerts: 0, stoppedEarly: "catalog_unavailable", notified: 0 });
   });
 
   it("suit les prix en France et signale une baisse le lendemain", async () => {
@@ -169,7 +191,7 @@ describe("DailyCheck", () => {
     const t = setup([item("tm1"), item("tm2")], []);
     t.setOffers({ tm1: [rent(4.99)], tm2: [rent(2.99)] });
     t.failPrices();
-    expect(await t.check.execute()).toEqual({ checked: 2, total: 2, alerts: 0, stoppedEarly: null });
+    expect(await t.check.execute()).toEqual({ checked: 2, total: 2, alerts: 0, stoppedEarly: null, notified: 0 });
     expect(t.statuses.size).toBe(2);
   });
 
@@ -186,5 +208,72 @@ describe("DailyCheck", () => {
 
     expect((await t.check.execute()).alerts).toBe(1);
     expect(t.stored.map((a) => a.id)).toEqual(["tm1:PRICE_DROP:FR:2:RENT:3.99"]);
+  });
+
+  it("notifie une seule fois à la fin, avec toutes les alertes du passage", async () => {
+    const t = setup([item("tm1"), item("tm2")], [{ platform: netflix, country: "FR" }]);
+    await t.check.execute();
+    expect(t.notified).toEqual([]);
+
+    t.setOffers({ tm1: [offer("FR", netflix)], tm2: [offer("FR", netflix)] });
+    const report = await t.check.execute();
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:AT_HOME:FR:8", "tm2:AT_HOME:FR:8"]]);
+    expect(report.notified).toBe(2);
+  });
+
+  it("notifie les alertes trouvées avant un arrêt anticipé", async () => {
+    const t = setup([item("tm1"), item("tm2")], [{ platform: netflix, country: "FR" }]);
+    await t.check.execute();
+    t.setOffers({ tm1: [offer("FR", netflix)], tm2: [offer("FR", netflix)] });
+    t.setOnSleep(() => t.setUnavailable());
+    const report = await t.check.execute();
+    expect(report.stoppedEarly).toBe("catalog_unavailable");
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:AT_HOME:FR:8"]]);
+  });
+
+  it("une erreur de notification ne fait pas échouer le passage", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t = setup([item("tm1")], [{ platform: netflix, country: "FR" }]);
+    await t.check.execute();
+    t.setOffers({ tm1: [offer("FR", netflix)] });
+    t.failNotify();
+    expect(await t.check.execute()).toEqual({ checked: 1, total: 1, alerts: 1, stoppedEarly: null, notified: 0 });
+  });
+
+  it("ne notifie pas les alertes trouvées à l'ajout d'un titre", async () => {
+    const t = setup([], [{ platform: netflix, country: "FR" }]);
+    await t.check.checkTitle(title("tm1"));
+    t.setOffers({ tm1: [offer("FR", netflix)] });
+    await t.check.checkTitle(title("tm1"));
+    expect(t.stored.map((a) => a.id)).toEqual(["tm1:AT_HOME:FR:8"]);
+    expect(t.notified).toEqual([]);
+  });
+
+  it("notifie les alertes déjà trouvées avant de remonter une erreur inattendue", async () => {
+    const t = setup([item("tm1"), item("tm2")], [{ platform: netflix, country: "FR" }]);
+    await t.check.execute();
+    t.setOffers({ tm1: [offer("FR", netflix)], tm2: [offer("FR", netflix)] });
+    t.failStatusSaveAt("tm2");
+    await expect(t.check.execute()).rejects.toThrow("Mongo indisponible");
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:AT_HOME:FR:8"]]);
+  });
+
+  it("ne notifie pas une baisse dont l'historique échoue : elle est re-détectée et notifiée le lendemain", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t = setup([item("tm1")], []);
+    t.setOffers({ tm1: [rent(4.99)] });
+    await t.check.execute();
+
+    t.setNow(new Date("2026-10-18T05:00:00Z"));
+    t.setOffers({ tm1: [rent(3.99)] });
+    t.failPrices();
+    expect((await t.check.execute()).alerts).toBe(0);
+    expect(t.notified).toEqual([]);
+
+    t.setNow(new Date("2026-10-19T05:00:00Z"));
+    t.failPrices(false);
+    const report = await t.check.execute();
+    expect(report.alerts).toBe(1);
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:PRICE_DROP:FR:2:RENT:3.99"]]);
   });
 });

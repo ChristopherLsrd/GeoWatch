@@ -901,6 +901,13 @@ a.at-home-link:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .pref-foot p { margin: 0; }
 .pref-saved { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--success); }
 .pref-saved svg { width: 18px; height: 18px; flex: none; }
+.pref-switches { display: flex; flex-direction: column; gap: 10px; }
+.pref-switch { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.pref-switch input { width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+.pref-devices { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pref-devices li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.pref-test { display: inline-flex; align-items: center; gap: 8px; }
+.pref-test svg { width: 18px; height: 18px; flex: none; }
 @media (min-width: 768px) {
   .pref-field { grid-template-columns: 44px minmax(0, 1fr); padding: 20px; }
   .pref-icon { grid-row: span 3; width: 44px; height: 44px; margin-bottom: 0; }

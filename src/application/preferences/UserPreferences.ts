@@ -1,7 +1,7 @@
-// Préférences de langue audio et sous-titres, appliquées par défaut aux filtres, et seuil des alertes de prix.
+// Préférences de langue audio et sous-titres, appliquées par défaut aux filtres, seuil des alertes de prix, et interrupteurs des notifications push.
 
 import type { PreferencesRepository } from "@/domain/ports/PreferencesRepository";
-import { DEFAULT_PREFERENCES, isLanguageCode, ORIGINAL_LANGUAGE, type Preferences } from "@/domain/Preferences";
+import { DEFAULT_PREFERENCES, isLanguageCode, type NotificationSettings, ORIGINAL_LANGUAGE, type Preferences } from "@/domain/Preferences";
 import type { PriceThreshold } from "@/domain/PriceHistory";
 
 export class InvalidPreferencesError extends Error {
@@ -21,7 +21,12 @@ export class UserPreferences {
   }
 
   // Un champ absent garde sa valeur enregistrée.
-  async update(input: { audioLanguage?: unknown; subtitleLanguage?: unknown; priceDropThreshold?: unknown }): Promise<Preferences> {
+  async update(input: {
+    audioLanguage?: unknown;
+    subtitleLanguage?: unknown;
+    priceDropThreshold?: unknown;
+    notifications?: unknown;
+  }): Promise<Preferences> {
     const current = await this.get();
     const preferences: Preferences = {
       audioLanguage:
@@ -33,6 +38,8 @@ export class UserPreferences {
       subtitleLanguage: input.subtitleLanguage === undefined ? current.subtitleLanguage : parse(input.subtitleLanguage),
       priceDropThreshold:
         input.priceDropThreshold === undefined ? current.priceDropThreshold : parseThreshold(input.priceDropThreshold),
+      notifications:
+        input.notifications === undefined ? current.notifications : parseNotifications(input.notifications, current.notifications),
     };
     await this.repository.save(preferences);
     return preferences;
@@ -55,4 +62,16 @@ function parseThreshold(value: unknown): PriceThreshold {
 
 function isBounded(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= MAX_THRESHOLD;
+}
+
+// Un interrupteur absent garde sa valeur. Tableau, clé inconnue (faute de frappe) ou valeur non booléenne : refusé.
+function parseNotifications(value: unknown, current: NotificationSettings): NotificationSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new InvalidPreferencesError("Notifications invalides.");
+  const switches = value as Record<string, unknown>;
+  if (Object.keys(switches).some((key) => key !== "atHome" && key !== "priceDrop")) {
+    throw new InvalidPreferencesError("Notifications invalides.");
+  }
+  const { atHome = current.atHome, priceDrop = current.priceDrop } = switches;
+  if (typeof atHome !== "boolean" || typeof priceDrop !== "boolean") throw new InvalidPreferencesError("Notifications invalides.");
+  return { atHome, priceDrop };
 }

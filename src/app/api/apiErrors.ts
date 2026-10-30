@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { InvalidCountriesError } from "@/application/catalog/GetTitleAvailability";
 import { InvalidPreferencesError } from "@/application/preferences/UserPreferences";
+import { InvalidPushSubscriptionError } from "@/application/push/PushDevices";
+import { PushNotConfiguredError } from "@/application/push/SendTestNotification";
 import { InvalidCountryError, PlatformNotFoundError } from "@/application/subscriptions/Subscriptions";
 import { InvalidNoteError, NotInWatchlistError, TitleNotFoundError } from "@/application/watchlist/Watchlist";
 import { CatalogUnavailableError } from "@/domain/ports/CatalogProvider";
@@ -27,6 +29,13 @@ export function apiErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof TitleNotFoundError || error instanceof NotInWatchlistError || error instanceof PlatformNotFoundError) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (error instanceof InvalidPushSubscriptionError) {
+    return NextResponse.json({ error: "invalid_push_subscription", message: error.message }, { status: 400 });
+  }
+  // 503 « push_not_configured » : clés VAPID absentes du serveur.
+  if (error instanceof PushNotConfiguredError) {
+    return NextResponse.json({ error: "push_not_configured", message: error.message }, { status: 503 });
   }
   console.error(error);
   return NextResponse.json({ error: "internal" }, { status: 500 });

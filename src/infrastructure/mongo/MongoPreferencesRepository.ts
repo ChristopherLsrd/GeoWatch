@@ -1,12 +1,13 @@
 import type { Collection, Db } from "mongodb";
 import type { PreferencesRepository } from "@/domain/ports/PreferencesRepository";
-import type { Preferences } from "@/domain/Preferences";
+import { DEFAULT_NOTIFICATIONS, type Preferences } from "@/domain/Preferences";
 import { DEFAULT_PRICE_THRESHOLD } from "@/domain/PriceHistory";
 
 // Un seul utilisateur : un seul document.
-// Seuil absent des préférences enregistrées avant son ajout.
-type PreferencesDocument = Omit<Preferences, "priceDropThreshold"> & {
+// Seuil et notifications absents des préférences enregistrées avant leur ajout.
+type PreferencesDocument = Omit<Preferences, "priceDropThreshold" | "notifications"> & {
   priceDropThreshold?: Preferences["priceDropThreshold"];
+  notifications?: Partial<Preferences["notifications"]>;
   _id: "user";
 };
 
@@ -20,6 +21,7 @@ export class MongoPreferencesRepository implements PreferencesRepository {
           audioLanguage: doc.audioLanguage,
           subtitleLanguage: doc.subtitleLanguage,
           priceDropThreshold: doc.priceDropThreshold ?? DEFAULT_PRICE_THRESHOLD,
+          notifications: { ...DEFAULT_NOTIFICATIONS, ...doc.notifications },
         }
       : null;
   }
@@ -31,6 +33,7 @@ export class MongoPreferencesRepository implements PreferencesRepository {
         audioLanguage: preferences.audioLanguage,
         subtitleLanguage: preferences.subtitleLanguage,
         priceDropThreshold: preferences.priceDropThreshold,
+        notifications: preferences.notifications,
       },
       { upsert: true },
     );

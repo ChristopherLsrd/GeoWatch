@@ -10,6 +10,9 @@ import { ImportLetterboxd } from "@/application/import/ImportLetterboxd";
 import { SearchHistory } from "@/application/history/SearchHistory";
 import { PriceDrops } from "@/application/prices/PriceDrops";
 import { TitlePrices } from "@/application/prices/TitlePrices";
+import { NotifyAlerts } from "@/application/push/NotifyAlerts";
+import { PushDevices } from "@/application/push/PushDevices";
+import { SendTestNotification } from "@/application/push/SendTestNotification";
 import { ListRatedTitles } from "@/application/ratings/ListRatedTitles";
 import { UserPreferences } from "@/application/preferences/UserPreferences";
 import { Subscriptions } from "@/application/subscriptions/Subscriptions";
@@ -27,6 +30,7 @@ import { getDb } from "./mongo/client";
 import { TmdbExternalTitleLookup } from "./tmdb/TmdbExternalTitleLookup";
 import { TmdbTitleExtras } from "./tmdb/TmdbTitleExtras";
 import { TmdbPersonSource } from "./tmdb/TmdbPersonSource";
+import { vapidFromEnv, WebPushSender } from "./push/WebPushSender";
 import { WikipediaPersonSource } from "./wikipedia/WikipediaPersonSource";
 import { CachedContentAdvisories } from "./mongo/CachedContentAdvisories";
 import { MongoAlertRepository } from "./mongo/MongoAlertRepository";
@@ -34,6 +38,7 @@ import { MongoAvailabilityCache } from "./mongo/MongoAvailabilityCache";
 import { MongoPersonCache } from "./mongo/MongoPersonCache";
 import { MongoPriceHistoryRepository } from "./mongo/MongoPriceHistoryRepository";
 import { MongoPreferencesRepository } from "./mongo/MongoPreferencesRepository";
+import { MongoPushSubscriptionRepository } from "./mongo/MongoPushSubscriptionRepository";
 import { MongoSearchHistoryRepository } from "./mongo/MongoSearchHistoryRepository";
 import { MongoSubscriptionRepository } from "./mongo/MongoSubscriptionRepository";
 import { MongoWatchlistRepository } from "./mongo/MongoWatchlistRepository";
@@ -77,6 +82,13 @@ const priceHistoryRepository = new MongoPriceHistoryRepository(getDb);
 export const userPreferences = new UserPreferences(preferencesRepository);
 export const alerts = new Alerts(alertRepository);
 const watchStatusRepository = new MongoWatchStatusRepository(getDb);
+// Notifications push : désactivées sans clés VAPID.
+const pushSubscriptionRepository = new MongoPushSubscriptionRepository(getDb);
+const vapid = vapidFromEnv();
+const pushSender = vapid ? new WebPushSender(vapid) : null;
+export const vapidPublicKey = vapid?.publicKey ?? null;
+export const pushDevices = new PushDevices(pushSubscriptionRepository);
+export const sendTestNotification = new SendTestNotification(pushSubscriptionRepository, pushSender);
 export const dailyCheck = new DailyCheck(
   watchlistRepository,
   subscriptionRepository,
@@ -85,6 +97,7 @@ export const dailyCheck = new DailyCheck(
   alertRepository,
   priceHistoryRepository,
   preferencesRepository,
+  new NotifyAlerts(pushSubscriptionRepository, pushSender, preferencesRepository),
 );
 const priceDrops = new PriceDrops(priceHistoryRepository, preferencesRepository);
 export const titlePrices = new TitlePrices(priceHistoryRepository);
