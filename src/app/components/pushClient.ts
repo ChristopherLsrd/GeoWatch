@@ -46,7 +46,9 @@ export function usesKey(subscription: Pick<PushSubscription, "options">, key: Ui
   return bytes.length === key.length && bytes.every((byte, index) => byte === key[index]);
 }
 
-export type TestResult = { device: string; ok: boolean; error: string | null };
+// Type partagé avec la route de test (import de type seulement, rien n'arrive dans le bundle du navigateur).
+import type { TestResult } from "@/application/push/SendTestNotification";
+export type { TestResult };
 
 // « Envoyée à 2 appareils » ; en cas d'échec, l'erreur appareil par appareil.
 export function testResultText(results: TestResult[]): { ok: boolean; text: string } {

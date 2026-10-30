@@ -25,7 +25,9 @@ export class WebPushSender implements PushSender {
     } catch (error) {
       // Détection par code HTTP et non par instanceof : la classe d'erreur peut être une autre copie selon le bundle.
       const status = (error as { statusCode?: unknown } | null)?.statusCode;
-      if (status === 404 || status === 410) {
+      // 403 : abonnement lié à une autre clé VAPID (clés renouvelées). Il n'aboutira plus jamais ; une fois
+      // retiré, le bouton « Activer sur cet appareil » réapparaît et réabonne le navigateur avec la nouvelle clé.
+      if (status === 403 || status === 404 || status === 410) {
         throw new PushSubscriptionGoneError(subscription.endpoint);
       }
       throw error;

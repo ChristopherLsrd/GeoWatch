@@ -31,9 +31,9 @@ describe("WebPushSender", () => {
     );
   });
 
-  it("traduit 404 et 410 en abonnement expiré, laisse passer les autres erreurs", async () => {
+  it("traduit 403, 404 et 410 en abonnement expiré, laisse passer les autres erreurs", async () => {
     const sender = new WebPushSender(vapid);
-    for (const status of [404, 410]) {
+    for (const status of [403, 404, 410]) {
       vi.mocked(sendNotification).mockRejectedValueOnce(webPushError(status));
       await expect(sender.send(subscription, message)).rejects.toThrow(PushSubscriptionGoneError);
     }
