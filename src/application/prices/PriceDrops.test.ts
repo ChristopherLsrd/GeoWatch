@@ -24,7 +24,7 @@ describe("PriceDrops", () => {
     expect((await strict.forTitles()).size).toBe(0);
     const loose = new PriceDrops(
       prices,
-      { get: async () => ({ audioLanguage: null, subtitleLanguage: null, priceDropThreshold: { amount: 1, percent: 5 } }), save: async () => {} },
+      { get: async () => ({ audioLanguage: null, subtitleLanguage: null, priceDropThreshold: { amount: 1, percent: 5 }, notifications: { atHome: true, priceDrop: true } }), save: async () => {} },
       clock,
     );
     expect([...(await loose.forTitles()).keys()]).toEqual(["tm1", "tm2"]);

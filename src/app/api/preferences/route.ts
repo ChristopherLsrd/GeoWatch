@@ -1,6 +1,6 @@
-// GET /api/preferences → { preferences: { audioLanguage, subtitleLanguage, priceDropThreshold: { amount, percent } } }
-// PUT /api/preferences { audioLanguage?, subtitleLanguage?, priceDropThreshold? } → { preferences }
-// (null ou "" : pas de langue ; champ absent : inchangé ; seuil de 0 à 100)
+// GET /api/preferences → { preferences: { audioLanguage, subtitleLanguage, priceDropThreshold: { amount, percent }, notifications: { atHome, priceDrop } } }
+// PUT /api/preferences { audioLanguage?, subtitleLanguage?, priceDropThreshold?, notifications? } → { preferences }
+// (null ou "" : pas de langue ; champ absent : inchangé ; seuil de 0 à 100 ; interrupteur absent de notifications : inchangé)
 
 import { NextRequest, NextResponse } from "next/server";
 import { userPreferences } from "@/infrastructure/container";
