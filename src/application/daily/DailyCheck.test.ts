@@ -66,7 +66,10 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     get: async (id) => statuses.get(id) ?? null,
     getMany: async (ids) => ids.flatMap((id) => statuses.get(id) ?? []),
     list: async () => [...statuses.values()],
-    save: async (status) => void statuses.set(status.titleId, status),
+    save: async (status) => {
+      if (status.titleId === failStatusSaveAt) throw new Error("Mongo indisponible");
+      statuses.set(status.titleId, status);
+    },
   };
   let failAlertsOnce = false;
   const stored: Alert[] = [];
@@ -84,6 +87,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
   };
   let now = new Date("2026-10-17T05:00:00Z");
   let failPrices = false;
+  let failStatusSaveAt: string | null = null;
   const histories = new Map<string, PriceHistory>();
   const priceRepo: PriceHistoryRepository = {
     list: async () => [...histories.values()],
@@ -127,6 +131,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     failAlertsOnce: () => (failAlertsOnce = true),
     statuses,
     notified,
+    failStatusSaveAt: (id: string) => (failStatusSaveAt = id),
     failNotify: () => (failNotify = true),
     setOnSleep: (fn: () => void) => (onSleep = fn),
   };
@@ -240,5 +245,28 @@ describe("DailyCheck", () => {
     await t.check.checkTitle(title("tm1"));
     expect(t.stored.map((a) => a.id)).toEqual(["tm1:AT_HOME:FR:8"]);
     expect(t.notified).toEqual([]);
+  });
+
+  it("notifie les alertes déjà trouvées avant de remonter une erreur inattendue", async () => {
+    const t = setup([item("tm1"), item("tm2")], [{ platform: netflix, country: "FR" }]);
+    await t.check.execute();
+    t.setOffers({ tm1: [offer("FR", netflix)], tm2: [offer("FR", netflix)] });
+    t.failStatusSaveAt("tm2");
+    await expect(t.check.execute()).rejects.toThrow("Mongo indisponible");
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:AT_HOME:FR:8"]]);
+  });
+
+  it("compte et notifie une baisse de prix même si l'historique ne s'enregistre pas", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t = setup([item("tm1")], []);
+    t.setOffers({ tm1: [rent(4.99)] });
+    await t.check.execute();
+
+    t.setNow(new Date("2026-10-18T05:00:00Z"));
+    t.setOffers({ tm1: [rent(3.99)] });
+    t.failPrices();
+    const report = await t.check.execute();
+    expect(report.alerts).toBe(1);
+    expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:PRICE_DROP:FR:2:RENT:3.99"]]);
   });
 });

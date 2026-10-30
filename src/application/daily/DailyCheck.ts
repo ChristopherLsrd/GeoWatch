@@ -35,7 +35,7 @@ export type DailyCheckReport = {
 export type DailyCheckOptions = {
   // Pause entre deux titres, pour rester raisonnable avec JustWatch.
   pauseMs?: number;
-  // Au-delà, on s'arrête proprement (limite de durée des fonctions Vercel).
+  // Au-delà, on s'arrête proprement (limite de durée des fonctions Vercel). Le temps restant est gardé pour les notifications push.
   timeBudgetMs?: number;
 };
 
@@ -53,7 +53,7 @@ export class DailyCheck {
     private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   ) {}
 
-  async execute({ pauseMs = 1000, timeBudgetMs = 240_000 }: DailyCheckOptions = {}): Promise<DailyCheckReport> {
+  async execute({ pauseMs = 1000, timeBudgetMs = 210_000 }: DailyCheckOptions = {}): Promise<DailyCheckReport> {
     const started = this.clock().getTime();
     const [items, subscriptions, threshold] = await Promise.all([
       this.watchlist.list(),
@@ -76,6 +76,8 @@ export class DailyCheck {
           report.stoppedEarly = "catalog_unavailable";
           break;
         }
+        // Les alertes déjà enregistrées ne doivent pas être perdues : on les notifie avant de remonter l'erreur.
+        await this.notify(found);
         throw error;
       }
       report.checked++;
@@ -104,15 +106,18 @@ export class DailyCheck {
 
   // Suivi des prix : alertes avant historique, pour qu'un échec laisse la baisse re-détectable. Une erreur est journalisée sans arrêter la vérification.
   private async followPrices(title: Title, offers: Offer[], atHome: boolean, threshold: PriceThreshold): Promise<Alert[]> {
+    let added: Alert[] = [];
     try {
       const histories = await this.prices.listForTitles([title.id]);
       const { changed, alerts } = trackPrices({ title, offers, histories, atHome, threshold, now: this.clock() });
       if (alerts.length > 0) await this.alerts.add(alerts);
+      added = alerts;
       await this.prices.save(changed);
       return alerts;
     } catch (error) {
       console.error(error);
-      return [];
+      // Les alertes déjà ajoutées sont comptées et notifiées malgré l'échec de l'historique.
+      return added;
     }
   }
 
