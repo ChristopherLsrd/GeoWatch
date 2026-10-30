@@ -14,7 +14,12 @@ export function fakePush(devices: PushSubscription[], failures: Record<string, E
   const sent: [string, PushMessage][] = [];
   const subscriptions: PushSubscriptionRepository = {
     list: async () => [...store],
-    save: async (s) => void store.push(s),
+    // Comme le port : un endpoint déjà connu garde sa date d'ajout.
+    save: async (s) => {
+      const existing = store.find((d) => d.endpoint === s.endpoint);
+      if (existing) Object.assign(existing, { keys: s.keys, device: s.device });
+      else store.push(s);
+    },
     remove: async (endpoint) => {
       const index = store.findIndex((d) => d.endpoint === endpoint);
       if (index >= 0) store.splice(index, 1);

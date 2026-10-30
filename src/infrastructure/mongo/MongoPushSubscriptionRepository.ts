@@ -12,8 +12,13 @@ export class MongoPushSubscriptionRepository implements PushSubscriptionReposito
     return docs.map(({ _id, keys, device, createdAt }) => ({ endpoint: _id, keys, device, createdAt }));
   }
 
-  async save({ endpoint, ...subscription }: PushSubscription): Promise<void> {
-    await (await this.collection()).replaceOne({ _id: endpoint }, subscription, { upsert: true });
+  // La date d'ajout n'est écrite qu'à la création : un ré-enregistrement garde la première.
+  async save({ endpoint, keys, device, createdAt }: PushSubscription): Promise<void> {
+    await (await this.collection()).updateOne(
+      { _id: endpoint },
+      { $set: { keys, device }, $setOnInsert: { createdAt } },
+      { upsert: true },
+    );
   }
 
   async remove(endpoint: string): Promise<void> {

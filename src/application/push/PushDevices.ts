@@ -14,6 +14,7 @@ export type PushDevice = Pick<PushSubscription, "endpoint" | "device" | "created
 
 const MAX_DEVICE_LENGTH = 60;
 const MAX_KEY_LENGTH = 512;
+const MAX_ENDPOINT_LENGTH = 1024;
 
 export class PushDevices {
   constructor(
@@ -32,7 +33,9 @@ export class PushDevices {
     if (!isHttpsUrl(endpoint) || !isKey(p256dh) || !isKey(auth)) throw new InvalidPushSubscriptionError();
     const subscription: PushSubscription = { endpoint, keys: { p256dh, auth }, device: deviceLabel(device), createdAt: this.clock() };
     await this.repository.save(subscription);
-    return { endpoint, device: subscription.device, createdAt: subscription.createdAt };
+    // Relu après l'écriture : la date d'ajout est celle de la première inscription.
+    const stored = (await this.repository.list()).find((s) => s.endpoint === endpoint) ?? subscription;
+    return { endpoint, device: stored.device, createdAt: stored.createdAt };
   }
 
   async remove(endpoint: unknown): Promise<void> {
@@ -42,7 +45,7 @@ export class PushDevices {
 }
 
 function isHttpsUrl(value: unknown): value is string {
-  if (typeof value !== "string") return false;
+  if (typeof value !== "string" || value.length > MAX_ENDPOINT_LENGTH) return false;
   try {
     return new URL(value).protocol === "https:";
   } catch {
@@ -54,8 +57,8 @@ function isKey(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= MAX_KEY_LENGTH;
 }
 
-// Nom coupé à 60 caractères ; « Navigateur » à défaut.
+// Nom coupé à 60 caractères (points de code, pour ne pas couper une paire de substitution) ; « Navigateur » à défaut.
 function deviceLabel(value: unknown): string {
-  const label = typeof value === "string" ? value.trim().slice(0, MAX_DEVICE_LENGTH) : "";
+  const label = typeof value === "string" ? Array.from(value.trim()).slice(0, MAX_DEVICE_LENGTH).join("") : "";
   return label || "Navigateur";
 }

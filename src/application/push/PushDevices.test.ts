@@ -19,11 +19,25 @@ describe("PushDevices", () => {
     const devices = new PushDevices(push.subscriptions, () => now);
     expect((await devices.register({ ...valid, device: "  " })).device).toBe("Navigateur");
     expect((await devices.register({ ...valid, device: "x".repeat(80) })).device).toHaveLength(60);
+    expect(Array.from((await devices.register({ ...valid, device: "😀".repeat(61) })).device)).toHaveLength(60);
+  });
+
+  it("garde la date d'ajout d'un appareil réenregistré et prend le nouveau nom", async () => {
+    const push = fakePush([]);
+    let current = now;
+    const devices = new PushDevices(push.subscriptions, () => current);
+    await devices.register(valid);
+    current = new Date("2026-10-31T10:00:00Z");
+    const again = await devices.register({ ...valid, device: "Chrome · Android 15" });
+
+    expect(again).toEqual({ endpoint: valid.endpoint, device: "Chrome · Android 15", createdAt: now });
+    expect(await devices.list()).toEqual([{ endpoint: valid.endpoint, device: "Chrome · Android 15", createdAt: now }]);
   });
 
   it("refuse un abonnement invalide", async () => {
     const devices = new PushDevices(fakePush([]).subscriptions);
-    for (const input of [null, {}, { ...valid, endpoint: "http://push/x" }, { ...valid, endpoint: "pas une url" }, { ...valid, keys: { p256dh: "p" } }, { ...valid, keys: null }]) {
+    const tooLong = `https://push/${"x".repeat(1024)}`;
+    for (const input of [null, {}, { ...valid, endpoint: "http://push/x" }, { ...valid, endpoint: "pas une url" }, { ...valid, endpoint: tooLong }, { ...valid, keys: { p256dh: "p" } }, { ...valid, keys: null }]) {
       await expect(devices.register(input)).rejects.toThrow(InvalidPushSubscriptionError);
     }
   });

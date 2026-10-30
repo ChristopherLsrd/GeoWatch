@@ -38,4 +38,12 @@ describe("MongoPushSubscriptionRepository", () => {
     await repository.remove("https://push/a");
     expect((await repository.list()).map((s) => s.endpoint)).toEqual(["https://push/b"]);
   });
+
+  it("garde la date d'ajout d'un endpoint déjà connu", async () => {
+    const repository = new MongoPushSubscriptionRepository(async () => client.db("test-keep"));
+    await repository.save(subscription("https://push/b", "Edge · Windows", 2));
+    await repository.save(subscription("https://push/b", "Edge · Windows 11", 9));
+
+    expect(await repository.list()).toEqual([subscription("https://push/b", "Edge · Windows 11", 2)]);
+  });
 });
