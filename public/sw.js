@@ -4,7 +4,14 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", (event) => {
-  const message = event.data ? event.data.json() : { title: "GeoWatch", body: "", url: "/" };
+  let message = { title: "GeoWatch", body: "", url: "/" };
+  if (event.data) {
+    try {
+      message = event.data.json();
+    } catch {
+      message = { title: "GeoWatch", body: event.data.text(), url: "/" };
+    }
+  }
   event.waitUntil(
     self.registration.showNotification(message.title, {
       body: message.body,
@@ -15,24 +22,19 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Au clic : un onglet GeoWatch déjà ouvert est réutilisé, sinon on en ouvre un.
+// Au clic : un onglet GeoWatch contrôlé par le service worker est réutilisé (navigate n'y fonctionne que là), sinon on en ouvre un.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const existing = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      const [existing] = await self.clients.matchAll({ type: "window" });
       if (existing) {
-        try {
-          await existing.focus();
-          await existing.navigate(url);
-          return;
-        } catch {
-          // Onglet non contrôlé par le service worker : on en ouvre un nouveau.
-        }
+        await existing.navigate(url);
+        await existing.focus();
+      } else {
+        await self.clients.openWindow(url);
       }
-      await self.clients.openWindow(url);
     })(),
   );
 });

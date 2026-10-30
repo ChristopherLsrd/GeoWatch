@@ -119,17 +119,19 @@ export function NotificationsSettings() {
     setBusy(true);
     setStatus(null);
     try {
+      // L'appareil courant est d'abord désabonné dans le navigateur : si le DELETE échoue,
+      // le serveur retirera lui-même l'abonnement mort au prochain envoi (410).
+      if (endpoint === currentEndpoint) {
+        await (await currentPushSubscription())?.unsubscribe();
+        setCurrentEndpoint(null);
+        setDevices((list) => (list ?? []).filter((d) => d.endpoint !== endpoint));
+      }
       const response = await apiFetch("/api/push/subscriptions", {
         method: "DELETE",
         headers: JSON_HEADERS,
         body: JSON.stringify({ endpoint }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      // L'appareil courant est aussi désabonné dans le navigateur.
-      if (endpoint === currentEndpoint) {
-        await (await currentPushSubscription())?.unsubscribe();
-        setCurrentEndpoint(null);
-      }
       setDevices((list) => (list ?? []).filter((d) => d.endpoint !== endpoint));
     } catch {
       setStatus({ ok: false, text: "Impossible de retirer l'appareil." });
@@ -139,6 +141,10 @@ export function NotificationsSettings() {
   }
 
   async function sendTest() {
+    if (pushSupported() && Notification.permission === "denied") {
+      setSupport("denied");
+      return;
+    }
     setBusy(true);
     setStatus(null);
     try {
@@ -151,8 +157,12 @@ export function NotificationsSettings() {
       const { results } = (await response.json()) as { results: TestResult[] };
       setStatus(testResultText(results));
       // Les appareils expirés ont été retirés par le serveur.
-      const list = await apiFetch("/api/push/subscriptions");
-      if (list.ok) setDevices(((await list.json()) as { devices: Device[] }).devices);
+      try {
+        const list = await apiFetch("/api/push/subscriptions");
+        if (list.ok) setDevices(((await list.json()) as { devices: Device[] }).devices);
+      } catch {
+        // Le résultat du test reste affiché ; la liste sera relue au prochain chargement.
+      }
     } catch {
       setStatus({ ok: false, text: "Impossible d'envoyer la notification de test." });
     } finally {

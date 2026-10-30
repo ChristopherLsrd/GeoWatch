@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { base64UrlToBytes, testResultText } from "./pushClient";
+import { base64UrlToBytes, testResultText, usesKey } from "./pushClient";
 
 describe("base64UrlToBytes", () => {
   it("décode le base64url sans remplissage", () => {
@@ -17,5 +17,15 @@ describe("testResultText", () => {
     });
     expect(testResultText([{ device: "B", ok: false, error: null }])).toEqual({ ok: false, text: "B : échec" });
     expect(testResultText([])).toEqual({ ok: false, text: "Aucun appareil enregistré." });
+  });
+});
+
+describe("usesKey", () => {
+  const key = new Uint8Array([1, 2, 3]);
+  it("compare la clé de l'abonnement à la clé publique reçue", () => {
+    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2, 3]).buffer } }, key)).toBe(true);
+    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2, 4]).buffer } }, key)).toBe(false);
+    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2]).buffer } }, key)).toBe(false);
+    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: null } }, key)).toBe(false);
   });
 });

@@ -28,10 +28,20 @@ export async function subscribeToPush(publicKey: string): Promise<PushSubscripti
   if (permission !== "granted") throw new PushPermissionError(permission);
   const registration = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
-  return (
-    (await registration.pushManager.getSubscription()) ??
-    registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) })
-  );
+  const key = base64UrlToBytes(publicKey);
+  const existing = await registration.pushManager.getSubscription();
+  if (existing && usesKey(existing, key)) return existing;
+  // Abonnement lié à une autre clé VAPID (clés changées côté serveur) : inutilisable, on le remplace.
+  await existing?.unsubscribe();
+  return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+}
+
+// L'abonnement a-t-il été créé avec cette clé publique ?
+export function usesKey(subscription: Pick<PushSubscription, "options">, key: Uint8Array): boolean {
+  const current = subscription.options?.applicationServerKey;
+  if (!current) return false;
+  const bytes = new Uint8Array(current);
+  return bytes.length === key.length && bytes.every((byte, index) => byte === key[index]);
 }
 
 export type TestResult = { device: string; ok: boolean; error: string | null };
