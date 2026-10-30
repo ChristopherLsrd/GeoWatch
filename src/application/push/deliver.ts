@@ -5,7 +5,8 @@ import type { PushSubscriptionRepository } from "@/domain/ports/PushSubscription
 export type Delivery = { sent: number; failed: number; removed: boolean; error: string | null };
 
 // Envoie les messages à un appareil, dans l'ordre. Un appareil expiré est retiré et ne reçoit pas la suite ;
-// une autre erreur est journalisée sans arrêter les messages suivants.
+// une autre erreur est journalisée sans arrêter les messages suivants. Ne lève jamais : toute erreur est
+// rapportée dans le résultat (deliverAll en dépend).
 export async function deliver(
   sender: PushSender,
   subscriptions: PushSubscriptionRepository,
@@ -36,20 +37,15 @@ export async function deliver(
   return delivery;
 }
 
-// Envoie les messages à tous les appareils enregistrés, en parallèle. Une erreur imprévue sur un appareil
-// est journalisée et comptée comme un échec, sans faire perdre les résultats des autres.
+// Envoie les messages à tous les appareils enregistrés, en parallèle : la durée ne dépend pas de leur nombre.
+// Promise.all suffit, deliver ne lève jamais.
 export async function deliverAll(
   sender: PushSender,
   subscriptions: PushSubscriptionRepository,
   messages: PushMessage[],
 ): Promise<{ device: PushSubscription; delivery: Delivery }[]> {
   const devices = await subscriptions.list();
-  const settled = await Promise.allSettled(devices.map((device) => deliver(sender, subscriptions, device, messages)));
-  return devices.map((device, i) => {
-    const outcome = settled[i];
-    if (outcome.status === "fulfilled") return { device, delivery: outcome.value };
-    console.error(outcome.reason);
-    const error = outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
-    return { device, delivery: { sent: 0, failed: messages.length, removed: false, error } };
-  });
+  return Promise.all(
+    devices.map(async (device) => ({ device, delivery: await deliver(sender, subscriptions, device, messages) })),
+  );
 }

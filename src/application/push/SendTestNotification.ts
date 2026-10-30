@@ -22,6 +22,6 @@ export class SendTestNotification {
   async execute(): Promise<TestResult[]> {
     if (!this.sender) throw new PushNotConfiguredError();
     const deliveries = await deliverAll(this.sender, this.subscriptions, [TEST_MESSAGE]);
-    return deliveries.map(({ device, delivery }) => ({ device: device.device, ok: delivery.sent === 1, error: delivery.error }));
+    return deliveries.map(({ device, delivery }) => ({ device: device.device, ok: delivery.failed === 0, error: delivery.error }));
   }
 }
