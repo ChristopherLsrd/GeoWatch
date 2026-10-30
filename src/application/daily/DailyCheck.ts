@@ -104,20 +104,18 @@ export class DailyCheck {
     return [...alerts, ...(await this.followPrices(title, offers, current.atHome.length > 0, threshold))];
   }
 
-  // Suivi des prix : alertes avant historique, pour qu'un échec laisse la baisse re-détectable. Une erreur est journalisée sans arrêter la vérification.
+  // Suivi des prix : alertes avant historique, pour qu'un échec laisse la baisse re-détectable.
+  // Une erreur est journalisée sans arrêter la vérification ; si l'historique échoue, l'alerte n'est ni comptée ni notifiée maintenant : la baisse est re-détectée et notifiée le lendemain.
   private async followPrices(title: Title, offers: Offer[], atHome: boolean, threshold: PriceThreshold): Promise<Alert[]> {
-    let added: Alert[] = [];
     try {
       const histories = await this.prices.listForTitles([title.id]);
       const { changed, alerts } = trackPrices({ title, offers, histories, atHome, threshold, now: this.clock() });
       if (alerts.length > 0) await this.alerts.add(alerts);
-      added = alerts;
       await this.prices.save(changed);
       return alerts;
     } catch (error) {
       console.error(error);
-      // Les alertes déjà ajoutées sont comptées et notifiées malgré l'échec de l'historique.
-      return added;
+      return [];
     }
   }
 

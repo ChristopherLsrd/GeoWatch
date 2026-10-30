@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Availability } from "@/domain/Availability";
 import type { Offer } from "@/domain/Offer";
 import type { AlertRepository } from "@/domain/ports/AlertRepository";
@@ -127,7 +127,7 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
     setUnavailable: () => (unavailable = true),
     histories,
     setNow: (date: Date) => (now = date),
-    failPrices: () => (failPrices = true),
+    failPrices: (fail = true) => (failPrices = fail),
     failAlertsOnce: () => (failAlertsOnce = true),
     statuses,
     notified,
@@ -140,6 +140,8 @@ function setup(items: WatchlistItem[], subscriptions: Subscription[]) {
 const item = (id: string): WatchlistItem => ({ title: title(id), details: null, note: "", addedAt: new Date() });
 
 describe("DailyCheck", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("sert de référence au premier passage, puis signale l'arrivée chez moi et la VF", async () => {
     const t = setup([item("tm1")], [{ platform: netflix, country: "FR" }]);
     t.setOffers({ tm1: [offer("BE", canal)] });
@@ -256,7 +258,7 @@ describe("DailyCheck", () => {
     expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:AT_HOME:FR:8"]]);
   });
 
-  it("compte et notifie une baisse de prix même si l'historique ne s'enregistre pas", async () => {
+  it("ne notifie pas une baisse dont l'historique échoue : elle est re-détectée et notifiée le lendemain", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const t = setup([item("tm1")], []);
     t.setOffers({ tm1: [rent(4.99)] });
@@ -265,6 +267,11 @@ describe("DailyCheck", () => {
     t.setNow(new Date("2026-10-18T05:00:00Z"));
     t.setOffers({ tm1: [rent(3.99)] });
     t.failPrices();
+    expect((await t.check.execute()).alerts).toBe(0);
+    expect(t.notified).toEqual([]);
+
+    t.setNow(new Date("2026-10-19T05:00:00Z"));
+    t.failPrices(false);
     const report = await t.check.execute();
     expect(report.alerts).toBe(1);
     expect(t.notified.map((alerts) => alerts.map((a) => a.id))).toEqual([["tm1:PRICE_DROP:FR:2:RENT:3.99"]]);
