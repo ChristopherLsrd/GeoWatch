@@ -21,13 +21,13 @@ const webPushError = (status: number) => new (WebPushError as unknown as new (m:
 beforeEach(() => vi.mocked(sendNotification).mockReset());
 
 describe("WebPushSender", () => {
-  it("envoie le message en JSON avec les clés VAPID et une durée de vie de 24 h", async () => {
+  it("envoie le message en JSON avec les clés VAPID, une durée de vie de 24 h et un délai de 10 s", async () => {
     vi.mocked(sendNotification).mockResolvedValue({ statusCode: 201, body: "", headers: {} });
     await new WebPushSender(vapid).send(subscription, message);
     expect(sendNotification).toHaveBeenCalledWith(
       { endpoint: "https://push/a", keys: { p256dh: "p", auth: "a" } },
       JSON.stringify(message),
-      { TTL: 86_400, vapidDetails: { subject: "mailto:moi@example.com", publicKey: "pub", privateKey: "priv" } },
+      { TTL: 86_400, timeout: 10_000, vapidDetails: { subject: "mailto:moi@example.com", publicKey: "pub", privateKey: "priv" } },
     );
   });
 
@@ -37,8 +37,9 @@ describe("WebPushSender", () => {
       vi.mocked(sendNotification).mockRejectedValueOnce(webPushError(status));
       await expect(sender.send(subscription, message)).rejects.toThrow(PushSubscriptionGoneError);
     }
-    vi.mocked(sendNotification).mockRejectedValueOnce(webPushError(500));
-    await expect(sender.send(subscription, message)).rejects.not.toThrow(PushSubscriptionGoneError);
+    const serverError = webPushError(500);
+    vi.mocked(sendNotification).mockRejectedValueOnce(serverError);
+    await expect(sender.send(subscription, message)).rejects.toBe(serverError);
   });
 });
 
@@ -46,5 +47,15 @@ describe("vapidFromEnv", () => {
   it("demande les trois variables", () => {
     expect(vapidFromEnv({ VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv", VAPID_SUBJECT: "mailto:moi@example.com" })).toEqual(vapid);
     expect(vapidFromEnv({ VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv" })).toBeNull();
+  });
+
+  it("retire les espaces et retours à la ligne autour des valeurs", () => {
+    expect(
+      vapidFromEnv({ VAPID_PUBLIC_KEY: " pub\n", VAPID_PRIVATE_KEY: "priv \r\n", VAPID_SUBJECT: "  mailto:moi@example.com\n" }),
+    ).toEqual(vapid);
+  });
+
+  it("refuse un sujet qui n'est ni un mailto: ni un https:", () => {
+    expect(vapidFromEnv({ VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv", VAPID_SUBJECT: "moi@example.com" })).toBeNull();
   });
 });
