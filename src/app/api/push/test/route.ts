@@ -6,6 +6,8 @@ import { sendTestNotification } from "@/infrastructure/container";
 import { apiErrorResponse } from "../../apiErrors";
 
 export const dynamic = "force-dynamic";
+// Un appareil à la fois, jusqu'à 10 s chacun : on laisse la marge pour tous les appareils.
+export const maxDuration = 60;
 
 export async function POST() {
   try {
