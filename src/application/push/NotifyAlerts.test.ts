@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_PREFERENCES, type NotificationSettings } from "@/domain/Preferences";
 import { PushSubscriptionGoneError } from "@/domain/ports/PushSender";
 import type { Alert } from "@/domain/WatchStatus";
@@ -20,6 +20,8 @@ const prefs = (notifications: NotificationSettings) => ({ get: async () => ({ ..
 const all = prefs({ atHome: true, priceDrop: true });
 
 describe("NotifyAlerts", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("envoie chaque alerte à chaque appareil, sans la VF", async () => {
     const push = fakePush([device("e1"), device("e2")]);
     const report = await new NotifyAlerts(push.subscriptions, push.sender, all).execute([
@@ -64,6 +66,17 @@ describe("NotifyAlerts", () => {
     expect(push.store.map((d) => d.endpoint)).toEqual(["broken", "ok"]);
     expect(push.sent.map(([e]) => e)).toEqual(["ok", "ok"]);
     expect(report).toEqual({ sent: 2, failed: 3, removed: 1 });
+  });
+
+  it("continue avec les autres appareils si le retrait d'un appareil expiré échoue", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const push = fakePush([device("gone"), device("ok")], { gone: new PushSubscriptionGoneError("gone") });
+    push.subscriptions.remove = async () => {
+      throw new Error("Mongo");
+    };
+    const report = await new NotifyAlerts(push.subscriptions, push.sender, all).execute([alert("tm1", "AT_HOME")]);
+    expect(push.sent.map(([e]) => e)).toEqual(["ok"]);
+    expect(report).toEqual({ sent: 1, failed: 1, removed: 0 });
   });
 
   it("ne fait rien sans alerte notifiable, sans appareil ou sans clés VAPID", async () => {

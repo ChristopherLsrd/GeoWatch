@@ -20,7 +20,13 @@ export async function deliver(
     } catch (error) {
       delivery.failed++;
       if (error instanceof PushSubscriptionGoneError) {
-        await subscriptions.remove(device.endpoint);
+        // Un échec de retrait (base indisponible) ne doit pas interrompre les autres appareils.
+        try {
+          await subscriptions.remove(device.endpoint);
+        } catch (removeError) {
+          console.error(removeError);
+          return { ...delivery, error: "Appareil expiré, retrait impossible." };
+        }
         return { ...delivery, removed: true, error: "Appareil expiré, retiré de la liste." };
       }
       console.error(error);

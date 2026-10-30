@@ -13,8 +13,13 @@ export type NotifyReport = { sent: number; failed: number; removed: number };
 
 export type AlertNotifier = { execute(alerts: Alert[]): Promise<NotifyReport> };
 
-// Types notifiables et leur interrupteur ; les autres (VF) ne sont jamais notifiés.
-const SETTING_OF: Partial<Record<AlertKind, keyof NotificationSettings>> = { AT_HOME: "atHome", PRICE_DROP: "priceDrop" };
+// Interrupteur de chaque type d'alerte, ou null s'il n'est jamais notifié (VF). Record complet :
+// un nouveau type d'alerte doit être classé ici, sinon tsc échoue.
+const SETTING_OF: Record<AlertKind, keyof NotificationSettings | null> = {
+  AT_HOME: "atHome",
+  FRENCH_AUDIO: null,
+  PRICE_DROP: "priceDrop",
+};
 
 export class NotifyAlerts implements AlertNotifier {
   constructor(
@@ -32,7 +37,7 @@ export class NotifyAlerts implements AlertNotifier {
     const settings = await this.settings();
     const wanted = alerts.filter((alert) => {
       const setting = SETTING_OF[alert.kind];
-      return setting !== undefined && settings[setting];
+      return setting !== null && settings[setting];
     });
     if (wanted.length === 0) return report;
 

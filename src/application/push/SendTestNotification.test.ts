@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PushSubscriptionGoneError } from "@/domain/ports/PushSender";
 import { device, fakePush } from "./fakes";
 import { PushNotConfiguredError, SendTestNotification } from "./SendTestNotification";
 
 describe("SendTestNotification", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("donne le résultat par appareil et retire les expirés", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const push = fakePush([device("e1", "Chrome · Android"), device("e2", "Edge · Windows"), device("e3", "Firefox · Linux")], {
