@@ -2,7 +2,7 @@
 
 import type { PushSender } from "@/domain/ports/PushSender";
 import type { PushSubscriptionRepository } from "@/domain/ports/PushSubscriptionRepository";
-import { deliver } from "./deliver";
+import { deliverAll } from "./deliver";
 import { TEST_MESSAGE } from "./pushMessages";
 
 export class PushNotConfiguredError extends Error {
@@ -21,14 +21,7 @@ export class SendTestNotification {
 
   async execute(): Promise<TestResult[]> {
     if (!this.sender) throw new PushNotConfiguredError();
-    const sender = this.sender;
-    // Appareils servis en parallèle : la durée ne dépend pas de leur nombre (deliver ne lève pas).
-    const devices = await this.subscriptions.list();
-    return Promise.all(
-      devices.map(async (device) => {
-        const delivery = await deliver(sender, this.subscriptions, device, [TEST_MESSAGE]);
-        return { device: device.device, ok: delivery.sent === 1, error: delivery.error };
-      }),
-    );
+    const deliveries = await deliverAll(this.sender, this.subscriptions, [TEST_MESSAGE]);
+    return deliveries.map(({ device, delivery }) => ({ device: device.device, ok: delivery.sent === 1, error: delivery.error }));
   }
 }

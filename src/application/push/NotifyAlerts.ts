@@ -6,7 +6,7 @@ import type { PreferencesRepository } from "@/domain/ports/PreferencesRepository
 import type { PushSender } from "@/domain/ports/PushSender";
 import type { PushSubscriptionRepository } from "@/domain/ports/PushSubscriptionRepository";
 import type { Alert, AlertKind } from "@/domain/WatchStatus";
-import { deliver } from "./deliver";
+import { deliverAll } from "./deliver";
 import { alertMessages } from "./pushMessages";
 
 export type NotifyReport = { sent: number; failed: number; removed: number };
@@ -41,14 +41,7 @@ export class NotifyAlerts implements AlertNotifier {
     });
     if (wanted.length === 0) return report;
 
-    const sender = this.sender;
-    const messages = alertMessages(wanted);
-    // Appareils servis en parallèle, messages dans l'ordre pour chacun (deliver ne lève pas).
-    const devices = await this.subscriptions.list();
-    const deliveries = await Promise.all(
-      devices.map((device) => deliver(sender, this.subscriptions, device, messages)),
-    );
-    for (const delivery of deliveries) {
+    for (const { delivery } of await deliverAll(this.sender, this.subscriptions, alertMessages(wanted))) {
       report.sent += delivery.sent;
       report.failed += delivery.failed;
       if (delivery.removed) report.removed++;
