@@ -108,7 +108,10 @@ export function NotificationsSettings() {
         // Ancien abonnement (autre clé VAPID) : retiré du serveur, un échec est sans conséquence.
         const old = pushed.replaced;
         void apiFetch("/api/push/subscriptions", { method: "DELETE", headers: JSON_HEADERS, body: JSON.stringify({ endpoint: old }) })
-          .then(() => setDevices((list) => (list ?? []).filter((d) => d.endpoint !== old)))
+          .then((response) => {
+            if (!response.ok) throw new Error(String(response.status));
+            setDevices((list) => (list ?? []).filter((d) => d.endpoint !== old));
+          })
           .catch((error) => console.error("Retrait de l'ancien abonnement impossible", error));
       }
       setStatus({ ok: true, text: "Notifications activées sur cet appareil" });
@@ -151,8 +154,7 @@ export function NotificationsSettings() {
 
   async function sendTest() {
     // Le test sert tous les appareils : il part même si celui-ci a bloqué les notifications.
-    const blockedHere = pushSupported() && Notification.permission === "denied";
-    if (blockedHere) setSupport("denied");
+    if (pushSupported() && Notification.permission === "denied") setSupport("denied");
     setBusy(true);
     setStatus(null);
     try {
@@ -164,7 +166,7 @@ export function NotificationsSettings() {
       if (!response.ok) throw new Error(String(response.status));
       const { results } = (await response.json()) as { results: TestResult[] };
       const result = testResultText(results);
-      setStatus(blockedHere ? { ok: false, text: `${result.text} ${DENIED_TEXT}` } : result);
+      setStatus(result);
       // Les appareils expirés ont été retirés par le serveur.
       try {
         const list = await apiFetch("/api/push/subscriptions");

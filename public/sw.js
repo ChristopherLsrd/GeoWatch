@@ -4,13 +4,20 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", (event) => {
-  let message = { title: "GeoWatch", body: "", url: "/" };
+  const message = { title: "GeoWatch", body: "", url: "/", image: undefined };
   if (event.data) {
     try {
       const parsed = event.data.json();
-      if (parsed && typeof parsed === "object" && typeof parsed.title === "string") message = parsed;
+      if (typeof parsed === "string") {
+        message.body = parsed;
+      } else if (parsed && typeof parsed === "object") {
+        if (typeof parsed.title === "string") message.title = parsed.title;
+        if (typeof parsed.body === "string") message.body = parsed.body;
+        if (typeof parsed.url === "string" && parsed.url.startsWith("/")) message.url = parsed.url;
+        if (typeof parsed.image === "string") message.image = parsed.image;
+      }
     } catch {
-      message = { title: "GeoWatch", body: event.data.text(), url: "/" };
+      message.body = event.data.text();
     }
   }
   event.waitUntil(
@@ -23,24 +30,27 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Au clic : l'onglet qui a le focus (sinon le premier) est réutilisé ; si navigate échoue, on ouvre une nouvelle fenêtre.
+// Au clic : parmi les onglets contrôlés (navigate n'y fonctionne que là), celui qui a le focus, sinon le premier ; sans onglet, nouvelle fenêtre.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const client = windows.find((w) => w.focused) ?? windows[0];
-      if (client) {
-        try {
-          const navigated = await client.navigate(url);
-          await (navigated ?? client).focus();
-          return;
-        } catch {
-          // Onglet non contrôlé (navigate rejette) : on ouvre une nouvelle fenêtre.
-        }
+      const controlled = await self.clients.matchAll({ type: "window" });
+      const client = controlled.find((w) => w.focused) ?? controlled[0];
+      if (!client) return self.clients.openWindow(url);
+      let target;
+      try {
+        target = (await client.navigate(url)) ?? client;
+      } catch {
+        return self.clients.openWindow(url);
       }
-      await self.clients.openWindow(url);
+      // Un échec du focus ne doit jamais ouvrir un second onglet.
+      try {
+        await target.focus();
+      } catch {
+        // Ignoré.
+      }
     })(),
   );
 });
