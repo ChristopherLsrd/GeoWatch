@@ -90,7 +90,7 @@ describe("UserPreferences avec Mongo", () => {
 
   it("refuse des notifications invalides", async () => {
     const preferences = setup("p8");
-    for (const notifications of [null, "oui", { atHome: "true" }, { priceDrop: 1 }]) {
+    for (const notifications of [null, "oui", [], { atHome: "true" }, { priceDrop: 1 }, { price_drop: false }, { atHome: true, extra: 1 }]) {
       await expect(preferences.update({ notifications })).rejects.toThrow(InvalidPreferencesError);
     }
   });

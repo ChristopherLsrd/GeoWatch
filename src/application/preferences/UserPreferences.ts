@@ -64,10 +64,14 @@ function isBounded(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= MAX_THRESHOLD;
 }
 
-// Un interrupteur absent garde sa valeur.
+// Un interrupteur absent garde sa valeur. Tableau, clé inconnue (faute de frappe) ou valeur non booléenne : refusé.
 function parseNotifications(value: unknown, current: NotificationSettings): NotificationSettings {
-  if (!value || typeof value !== "object") throw new InvalidPreferencesError("Notifications invalides.");
-  const { atHome = current.atHome, priceDrop = current.priceDrop } = value as Record<string, unknown>;
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new InvalidPreferencesError("Notifications invalides.");
+  const switches = value as Record<string, unknown>;
+  if (Object.keys(switches).some((key) => key !== "atHome" && key !== "priceDrop")) {
+    throw new InvalidPreferencesError("Notifications invalides.");
+  }
+  const { atHome = current.atHome, priceDrop = current.priceDrop } = switches;
   if (typeof atHome !== "boolean" || typeof priceDrop !== "boolean") throw new InvalidPreferencesError("Notifications invalides.");
   return { atHome, priceDrop };
 }
