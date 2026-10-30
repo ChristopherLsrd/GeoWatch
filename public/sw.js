@@ -7,7 +7,8 @@ self.addEventListener("push", (event) => {
   let message = { title: "GeoWatch", body: "", url: "/" };
   if (event.data) {
     try {
-      message = event.data.json();
+      const parsed = event.data.json();
+      if (parsed && typeof parsed === "object" && typeof parsed.title === "string") message = parsed;
     } catch {
       message = { title: "GeoWatch", body: event.data.text(), url: "/" };
     }
@@ -22,19 +23,24 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Au clic : un onglet GeoWatch contrôlé par le service worker est réutilisé (navigate n'y fonctionne que là), sinon on en ouvre un.
+// Au clic : l'onglet qui a le focus (sinon le premier) est réutilisé ; si navigate échoue, on ouvre une nouvelle fenêtre.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
   event.waitUntil(
     (async () => {
-      const [existing] = await self.clients.matchAll({ type: "window" });
-      if (existing) {
-        await existing.navigate(url);
-        await existing.focus();
-      } else {
-        await self.clients.openWindow(url);
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const client = windows.find((w) => w.focused) ?? windows[0];
+      if (client) {
+        try {
+          const navigated = await client.navigate(url);
+          await (navigated ?? client).focus();
+          return;
+        } catch {
+          // Onglet non contrôlé (navigate rejette) : on ouvre une nouvelle fenêtre.
+        }
       }
+      await self.clients.openWindow(url);
     })(),
   );
 });

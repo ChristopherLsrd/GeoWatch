@@ -26,6 +26,6 @@ describe("usesKey", () => {
     expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2, 3]).buffer } }, key)).toBe(true);
     expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2, 4]).buffer } }, key)).toBe(false);
     expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: new Uint8Array([1, 2]).buffer } }, key)).toBe(false);
-    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: null } }, key)).toBe(false);
+    expect(usesKey({ options: { userVisibleOnly: true, applicationServerKey: null } }, key)).toBe(true);
   });
 });

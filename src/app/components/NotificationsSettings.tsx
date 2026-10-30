@@ -17,6 +17,7 @@ const SWITCHES: { key: keyof Settings; label: string }[] = [
 ];
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const DENIED_TEXT = "Les notifications sont bloquées pour GeoWatch dans ce navigateur. Autorisez-les dans les réglages du site, puis rechargez la page.";
 const NOT_CONFIGURED = "Les notifications ne sont pas configurées sur le serveur.";
 
 // Section « Notifications » des préférences : interrupteurs par type, appareils activés, notification de test.
@@ -92,7 +93,8 @@ export function NotificationsSettings() {
       }
       if (!keyResponse.ok) throw new Error(String(keyResponse.status));
       const { publicKey } = (await keyResponse.json()) as { publicKey: string };
-      const subscription = (await subscribeToPush(publicKey)).toJSON();
+      const pushed = await subscribeToPush(publicKey);
+      const subscription = pushed.subscription.toJSON();
       const response = await apiFetch("/api/push/subscriptions", {
         method: "POST",
         headers: JSON_HEADERS,
@@ -102,6 +104,13 @@ export function NotificationsSettings() {
       const { device } = (await response.json()) as { device: Device };
       setDevices((list) => [...(list ?? []).filter((d) => d.endpoint !== device.endpoint), device]);
       setCurrentEndpoint(device.endpoint);
+      if (pushed.replaced && pushed.replaced !== device.endpoint) {
+        // Ancien abonnement (autre clé VAPID) : retiré du serveur, un échec est sans conséquence.
+        const old = pushed.replaced;
+        void apiFetch("/api/push/subscriptions", { method: "DELETE", headers: JSON_HEADERS, body: JSON.stringify({ endpoint: old }) })
+          .then(() => setDevices((list) => (list ?? []).filter((d) => d.endpoint !== old)))
+          .catch((error) => console.error("Retrait de l'ancien abonnement impossible", error));
+      }
       setStatus({ ok: true, text: "Notifications activées sur cet appareil" });
     } catch (error) {
       if (error instanceof PushPermissionError) {
@@ -123,8 +132,8 @@ export function NotificationsSettings() {
       // le serveur retirera lui-même l'abonnement mort au prochain envoi (410).
       if (endpoint === currentEndpoint) {
         await (await currentPushSubscription())?.unsubscribe();
+        // Le navigateur n'est plus abonné, quoi qu'il arrive ensuite.
         setCurrentEndpoint(null);
-        setDevices((list) => (list ?? []).filter((d) => d.endpoint !== endpoint));
       }
       const response = await apiFetch("/api/push/subscriptions", {
         method: "DELETE",
@@ -141,10 +150,9 @@ export function NotificationsSettings() {
   }
 
   async function sendTest() {
-    if (pushSupported() && Notification.permission === "denied") {
-      setSupport("denied");
-      return;
-    }
+    // Le test sert tous les appareils : il part même si celui-ci a bloqué les notifications.
+    const blockedHere = pushSupported() && Notification.permission === "denied";
+    if (blockedHere) setSupport("denied");
     setBusy(true);
     setStatus(null);
     try {
@@ -155,7 +163,8 @@ export function NotificationsSettings() {
       }
       if (!response.ok) throw new Error(String(response.status));
       const { results } = (await response.json()) as { results: TestResult[] };
-      setStatus(testResultText(results));
+      const result = testResultText(results);
+      setStatus(blockedHere ? { ok: false, text: `${result.text} ${DENIED_TEXT}` } : result);
       // Les appareils expirés ont été retirés par le serveur.
       try {
         const list = await apiFetch("/api/push/subscriptions");
@@ -230,7 +239,7 @@ export function NotificationsSettings() {
           ) : support === "denied" ? (
             <p className="pref-hint">
               <InformationCircleIcon aria-hidden="true" />
-              <span>Les notifications sont bloquées pour GeoWatch dans ce navigateur. Autorisez-les dans les réglages du site, puis rechargez la page.</span>
+              <span>{DENIED_TEXT}</span>
             </p>
           ) : (
             support === "ok" &&

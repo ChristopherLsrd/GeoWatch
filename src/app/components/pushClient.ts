@@ -23,23 +23,25 @@ export async function currentPushSubscription(): Promise<PushSubscription | null
 }
 
 // Autorisation d'abord (pendant le clic), puis service worker et abonnement.
-export async function subscribeToPush(publicKey: string): Promise<PushSubscription> {
+// `replaced` : endpoint de l'ancien abonnement quand il a dû être remplacé (clé VAPID changée), à retirer du serveur.
+export async function subscribeToPush(publicKey: string): Promise<{ subscription: PushSubscription; replaced: string | null }> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw new PushPermissionError(permission);
   const registration = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
   const key = base64UrlToBytes(publicKey);
   const existing = await registration.pushManager.getSubscription();
-  if (existing && usesKey(existing, key)) return existing;
+  if (existing && usesKey(existing, key)) return { subscription: existing, replaced: null };
   // Abonnement lié à une autre clé VAPID (clés changées côté serveur) : inutilisable, on le remplace.
   await existing?.unsubscribe();
-  return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  return { subscription, replaced: existing?.endpoint ?? null };
 }
 
-// L'abonnement a-t-il été créé avec cette clé publique ?
+// L'abonnement a-t-il été créé avec cette clé publique ? Clé illisible : on garde l'abonnement.
 export function usesKey(subscription: Pick<PushSubscription, "options">, key: Uint8Array): boolean {
   const current = subscription.options?.applicationServerKey;
-  if (!current) return false;
+  if (!current) return true;
   const bytes = new Uint8Array(current);
   return bytes.length === key.length && bytes.every((byte, index) => byte === key[index]);
 }

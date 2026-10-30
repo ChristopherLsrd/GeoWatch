@@ -1,9 +1,9 @@
 // Nom lisible d'un appareil à partir du User-Agent : « Chrome · Android », « Edge · Windows ».
 // L'ordre compte : Edge, Opera et Samsung Internet se déclarent aussi « Chrome » (CriOS, FxiOS et EdgiOS sont les versions iOS), Android aussi « Linux », iOS aussi « Mac OS X ».
 export function deviceName(userAgent: string): string {
-  const browser = /Edg\/|EdgiOS\//.test(userAgent)
+  const browser = /Edg\/|EdgA\/|EdgiOS\//.test(userAgent)
     ? "Edge"
-    : /OPR\//.test(userAgent)
+    : /OPR\/|OPT\//.test(userAgent)
       ? "Opera"
       : /SamsungBrowser\//.test(userAgent)
         ? "Samsung Internet"
